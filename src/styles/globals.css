@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for the invoice system */
+.invoice-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200;
+}
+
+.invoice-card-header {
+  @apply bg-purple-600 text-white px-6 py-4 rounded-t-lg;
+}
+
+.invoice-form-section {
+  @apply p-6 space-y-4;
+}
+
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.form-input {
+  @apply mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500;
+}
+
+.form-textarea {
+  @apply mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 resize-none;
+}
+
+.btn-primary {
+  @apply bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors;
+}
+
+.error-text {
+  @apply text-red-600 text-sm mt-1;
+}
+
+.success-text {
+  @apply text-green-600 text-sm mt-1;
+}
