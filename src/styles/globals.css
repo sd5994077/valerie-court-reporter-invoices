@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for the invoice system */
+.invoice-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200;
+}
+
+.invoice-card-header {
+  @apply bg-purple-600 text-white px-6 py-4 rounded-t-lg;
+}
+
+.invoice-form-section {
+  @apply p-6 space-y-4;
+}
+
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.form-input {
+  @apply mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500;
+}
+
+.form-textarea {
+  @apply mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 resize-none;
+}
+
+.btn-primary {
+  @apply bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors;
+}
+
+/* Focus Management and Autofocus Prevention */
+/* Prevent any unwanted autofocus behavior on page load */
+*[autofocus] {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Hide phantom input elements that might appear in navigation */
+nav input[type="text"],
+nav input[type="search"],
+nav input[type="email"],
+nav input[type="password"],
+nav input[type="number"],
+nav input[type="tel"],
+nav input[type="url"],
+nav input:not([type]),
+nav textarea,
+nav input,
+nav form {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  border: none !important;
+  outline: none !important;
+  background: none !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+/* Specifically target any white elements that might appear */
+nav div[style*="background"],
+nav div[style*="white"],
+nav span[style*="background"],
+nav span[style*="white"] {
+  display: none !important;
+  background: none !important;
+}
+
+/* Prevent any focus rings or outlines from showing as white boxes */
+nav *:focus {
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+nav *:focus:not(a):not(button) {
+  outline: none !important;
+  background: none !important;
+  border: none !important;
+}
+
+/* Hide any potential pseudo-elements that might create white boxes */
+nav *::before,
+nav *::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Prevent focus outline on elements that shouldn't have it */
+nav *:not(a):not(button):not([tabindex]):not([role="button"]) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Desktop Navigation Focus Management */
+@media (min-width: 768px) {
+  /* Ensure proper focus behavior for navigation links */
+  nav a,
+  nav button {
+    outline: none;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  /* Custom focus states for navigation elements */
+  nav a:focus,
+  nav button:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.5) !important;
+    outline-offset: 2px !important;
+  }
+  
+  /* Prevent any non-interactive elements from getting focus */
+  nav div:not([tabindex]):not([role]):not([onclick]),
+  nav span:not([tabindex]):not([role]):not([onclick]),
+  nav svg:not([tabindex]):not([role]):not([onclick]) {
+    outline: none !important;
+    box-shadow: none !important;
+    pointer-events: auto !important;
+  }
+  
+  /* Specifically target the desktop navigation area to prevent white boxes */
+  nav .hidden.md\\:flex {
+    background: none !important;
+  }
+  
+  nav .hidden.md\\:flex * {
+    background-color: transparent !important;
+    outline: none !important;
+  }
+  
+  /* Ensure navigation spans don't create white backgrounds */
+  nav span.hidden.lg\\:inline {
+    background: none !important;
+    background-color: transparent !important;
+    outline: none !important;
+    border: none !important;
+  }
+  
+  /* Remove any potential white backgrounds from focus states in desktop nav */
+  nav .hidden.md\\:flex *:focus:not(a):not(button) {
+    background: none !important;
+    background-color: transparent !important;
+    outline: none !important;
+  }
+}
+
+.error-text {
+  @apply text-red-600 text-sm mt-1;
+}
+
+.success-text {
+  @apply text-green-600 text-sm mt-1;
+}

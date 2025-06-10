@@ -1,0 +1,270 @@
+import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
+import { Logo } from './Logo';
+import { getBranding } from '../config/branding';
+
+interface MobileNavigationProps {
+  currentPage?: 'home' | 'invoice' | 'dashboard';
+}
+
+export function MobileNavigation({ currentPage }: MobileNavigationProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const branding = getBranding();
+
+  const toggleMenu = () => setIsOpen(!isOpen);
+  const closeMenu = () => setIsOpen(false);
+
+  // Focus management and keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        closeMenu();
+      }
+    };
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isOpen && 
+        mobileMenuRef.current && 
+        !mobileMenuRef.current.contains(event.target as Node) &&
+        navRef.current &&
+        !navRef.current.contains(event.target as Node)
+      ) {
+        closeMenu();
+      }
+    };
+
+    // Prevent autofocus on page load
+    const preventAutoFocus = (event: FocusEvent) => {
+      const target = event.target as HTMLElement;
+      if (
+        target &&
+        navRef.current &&
+        navRef.current.contains(target) &&
+        !target.closest('a') &&
+        !target.closest('button')
+      ) {
+        event.preventDefault();
+        target.blur();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('focus', preventAutoFocus, true);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('focus', preventAutoFocus, true);
+    };
+  }, [isOpen]);
+
+  // Prevent unwanted focus on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (navRef.current) {
+        const focusedElement = navRef.current.querySelector(':focus') as HTMLElement;
+        if (focusedElement && !focusedElement.closest('a') && !focusedElement.closest('button')) {
+          focusedElement.blur();
+        }
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <>
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4 lg:py-6">
+            {/* Logo */}
+            <div className="flex items-center space-x-4">
+              <Logo size="sm" className="text-orange-600 lg:hidden" />
+              <Logo size="md" className="text-orange-600 hidden lg:block" />
+            </div>
+            
+            {/* Business Info - Hidden on mobile, responsive on tablet+ */}
+            <div className="hidden sm:block text-right">
+              <h1 className="text-lg font-bold text-orange-600 sm:text-xl lg:text-2xl xl:text-3xl">
+                {branding.business.name}
+              </h1>
+              <p className="text-sm text-gray-600 font-medium lg:text-base">{branding.business.tagline}</p>
+              <div className="mt-1 lg:mt-2 text-xs lg:text-sm text-gray-500 space-y-0.5 lg:space-y-1">
+                <p className="hidden lg:block">{branding.business.address.street}</p>
+                <p className="hidden lg:block">{branding.business.address.city}, {branding.business.address.state} {branding.business.address.zipCode}</p>
+                <p className="flex items-center justify-end space-x-2">
+                  <svg className="w-3 h-3 lg:w-4 lg:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                  </svg>
+                  <span className="truncate">{branding.business.email}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Mobile business info */}
+            <div className="sm:hidden text-right">
+              <h1 className="text-sm font-bold text-orange-600">{branding.business.name}</h1>
+              <p className="text-xs text-gray-600">{branding.business.type}</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation Bar */}
+      <nav ref={navRef} className="bg-orange-600 shadow-lg relative z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-14 lg:h-16">
+            <div className="flex items-center">
+              <span className="text-white font-semibold text-base lg:text-lg">TEST Invoicing System</span>
+            </div>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-6">
+              <Link 
+                href="/"
+                className={`px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
+                  currentPage === 'home' 
+                    ? 'bg-white text-orange-600' 
+                    : 'text-white hover:bg-orange-700'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                </svg>
+                <span>Home</span>
+              </Link>
+              
+              <Link 
+                href="/create-invoice"
+                className={`px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
+                  currentPage === 'invoice' 
+                    ? 'bg-white text-orange-600' 
+                    : 'text-white hover:bg-orange-700'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+                <span>Invoice</span>
+              </Link>
+
+              <Link 
+                href="/dashboard"
+                className={`px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
+                  currentPage === 'dashboard' 
+                    ? 'bg-white text-orange-600' 
+                    : 'text-white hover:bg-orange-700'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+                <span>Dashboard</span>
+              </Link>
+            </div>
+
+            {/* Mobile Hamburger Menu */}
+            <div className="md:hidden">
+              <button
+                onClick={toggleMenu}
+                className="text-white hover:bg-orange-700 p-2 rounded-lg transition-colors duration-200"
+                aria-label="Toggle navigation menu"
+                aria-expanded={isOpen}
+              >
+                {isOpen ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Menu */}
+        {isOpen && (
+          <div ref={mobileMenuRef} className="md:hidden bg-orange-700 border-t border-orange-500 relative z-50">
+            <div className="px-4 pt-2 pb-3 space-y-1">
+              <Link 
+                href="/"
+                onClick={closeMenu}
+                className={`block w-full text-left px-3 py-3 rounded-lg transition-colors duration-200 ${
+                  currentPage === 'home' 
+                    ? 'bg-orange-600 text-white' 
+                    : 'text-white hover:bg-orange-800'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                  </svg>
+                  <div>
+                    <div className="font-medium">Home</div>
+                    <div className="text-xs opacity-80">Welcome & Overview</div>
+                  </div>
+                </div>
+              </Link>
+
+              <Link 
+                href="/create-invoice"
+                onClick={closeMenu}
+                className={`block w-full text-left px-3 py-3 rounded-lg transition-colors duration-200 ${
+                  currentPage === 'invoice' 
+                    ? 'bg-orange-600 text-white' 
+                    : 'text-white hover:bg-orange-800'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                  <div>
+                    <div className="font-medium">Create Invoice</div>
+                    <div className="text-xs opacity-80">New Invoice Form</div>
+                  </div>
+                </div>
+              </Link>
+
+              <Link 
+                href="/dashboard"
+                onClick={closeMenu}
+                className={`block w-full text-left px-3 py-3 rounded-lg transition-colors duration-200 ${
+                  currentPage === 'dashboard' 
+                    ? 'bg-orange-600 text-white' 
+                    : 'text-white hover:bg-orange-800'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                  </svg>
+                  <div>
+                    <div className="font-medium">Dashboard</div>
+                    <div className="text-xs opacity-80">Revenue & Analytics</div>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-30 bg-black bg-opacity-25 md:hidden" 
+          onClick={closeMenu}
+        />
+      )}
+    </>
+  );
+} 
