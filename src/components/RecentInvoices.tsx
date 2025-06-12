@@ -229,9 +229,11 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         throw new Error('Failed to render PDF content');
       }
 
-      // Generate filename: INV-YYYY-0000-ClientName.pdf
-      const clientName = invoiceData.manualClient?.name || invoiceData.manualClient?.company || 'Unknown-Client';
-      const filename = `${invoiceData.invoiceNumber}-${cleanForFilename(clientName)}.pdf`;
+      // Generate filename: Invoice-YYYY-MM-DD-ClientName.pdf
+      const invoiceDate = new Date(invoiceData.date);
+      const dateStr = invoiceDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const clientName = invoiceData.manualClient?.name || invoiceData.manualClient?.company || 'Client';
+      const filename = `Invoice-${dateStr}-${cleanForFilename(clientName)}.pdf`;
 
       const opt = {
         margin: [0, 0.3, 0, 0.3], // Zero top and bottom margins for maximum space
