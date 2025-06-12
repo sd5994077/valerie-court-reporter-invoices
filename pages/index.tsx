@@ -14,7 +14,7 @@ export default function HomePage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         {/* Welcome Header */}
         <div className="text-center mb-8 sm:mb-12 animate-in fade-in duration-700">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-orange-600 mb-2 sm:mb-4">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-purple-600 mb-2 sm:mb-4">
             Welcome to {branding.business.name}
           </h2>
           <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto px-4">

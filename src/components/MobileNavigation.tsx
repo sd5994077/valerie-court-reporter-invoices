@@ -84,13 +84,13 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
           <div className="flex justify-between items-center py-4 lg:py-6">
             {/* Logo */}
             <div className="flex items-center space-x-4">
-              <Logo size="sm" className="text-orange-600 lg:hidden" />
-              <Logo size="md" className="text-orange-600 hidden lg:block" />
+              <Logo size="sm" className="text-purple-600 lg:hidden" />
+              <Logo size="md" className="text-purple-600 hidden lg:block" />
             </div>
             
             {/* Business Info - Hidden on mobile, responsive on tablet+ */}
             <div className="hidden sm:block text-right">
-              <h1 className="text-lg font-bold text-orange-600 sm:text-xl lg:text-2xl xl:text-3xl">
+              <h1 className="text-lg font-bold text-purple-600 sm:text-xl lg:text-2xl xl:text-3xl">
                 {branding.business.name}
               </h1>
               <p className="text-sm text-gray-600 font-medium lg:text-base">{branding.business.tagline}</p>
@@ -108,7 +108,7 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
 
             {/* Mobile business info */}
             <div className="sm:hidden text-right">
-              <h1 className="text-sm font-bold text-orange-600">{branding.business.name}</h1>
+              <h1 className="text-sm font-bold text-purple-600">{branding.business.name}</h1>
               <p className="text-xs text-gray-600">{branding.business.type}</p>
             </div>
           </div>
@@ -116,7 +116,7 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
       </header>
 
       {/* Navigation Bar */}
-      <nav ref={navRef} className="bg-orange-600 shadow-lg relative z-50">
+      <nav ref={navRef} className="bg-purple-600 shadow-lg relative z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 lg:h-16">
             <div className="flex items-center">

@@ -1,34 +1,34 @@
 export const brandingConfig = {
   business: {
-    name: "Your Business Name ",
-    tagline: "Your Professional Tagline", 
-    type: "[Service Type]",
-    ownerName: "[Your Full Name]",
-    licenseNumber: "[Your License #]",
-    licenseType: "[License Type]",
-    email: "[your.email@domain.com]",
-    phone: "[Your Phone Number]",
-    website: "[www.yourbusiness.com]",
+    name: "Valerie De Leon, CSR #13025",
+    tagline: "Professional Court Reporting Services", 
+    type: "Legal Services",
+    ownerName: "Valerie De Leon",
+    licenseNumber: "#13025",
+    licenseType: "CSR",
+    email: "valeriedeleon.csr@gmail.com",
+    phone: "(512) 555-0123",
+    website: "www.valeriedeleon-csr.com",
     address: {
-      street: "[Your Street Address]",
-      city: "[Your City]",
-      state: "[ST]",
-      zipCode: "[ZIP]"
+      street: "126 Old Settlers Drive",
+      city: "San Marcos",
+      state: "TX",
+      zipCode: "78666"
     },
     payment: {
-      venmoHandle: "[Your-Venmo-Handle]",
+      venmoHandle: "ValerieDeLeon-CSR",
       acceptsChecks: true,
-      checkPayableTo: "[Your Business Name]"
+      checkPayableTo: "Valerie De Leon, CSR"
     }
   },
   serviceTypes: [
-    "[Service Type 1]",
-    "[Service Type 2]", 
-    "[Service Type 3]",
-    "[Service Type 4]",
-    "[Service Type 5]",
-    "[Service Type 6]",
-    "[Other Services]"
+    "Deposition",
+    "Court Hearing", 
+    "Arbitration",
+    "Examination Under Oath",
+    "Statement Under Oath",
+    "Transcript Preparation",
+    "Other Services"
   ],
   invoice: {
     dueDays: 30,
@@ -37,9 +37,9 @@ export const brandingConfig = {
   },
   styling: {
     primaryColor: "#7C3AED", // Professional purple
-    secondaryColor: "#FB923C",
+    secondaryColor: "#A855F7", // Purple secondary
     accentColor: "#059669", // Green accent for payment sections
-    logoText: "" // Professional branding
+    logoText: "VDL-CSR" // Professional branding
   }
 };
 
