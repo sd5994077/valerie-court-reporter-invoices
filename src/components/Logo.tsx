@@ -24,7 +24,7 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
   // Professional template logo design
   return (
     <div className={`${sizeClasses[size]} ${className} flex items-center justify-center relative`}>
-      <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-500 to-orange-700 rounded-full shadow-lg">
+      <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg">
         {/* Generic business/document symbol */}
         <div className="text-white">
           <svg 
@@ -39,7 +39,7 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
         
         {/* Test Badge */}
         <div className={`absolute -bottom-1 -right-1 bg-white rounded-full ${size === 'sm' ? 'w-5 h-5' : size === 'md' ? 'w-6 h-6' : 'w-7 h-7'} flex items-center justify-center shadow-md`}>
-          <span className={`font-bold text-red-600 ${size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-sm'}`}>
+          <span className={`font-bold text-purple-600 ${size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-sm'}`}>
             {branding.styling.logoText}
           </span>
         </div>

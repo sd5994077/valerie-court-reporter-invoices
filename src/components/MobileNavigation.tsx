@@ -129,8 +129,8 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
                 href="/"
                 className={`px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
                   currentPage === 'home' 
-                    ? 'bg-white text-orange-600' 
-                    : 'text-white hover:bg-orange-700'
+                    ? 'bg-white text-purple-600' 
+                    : 'text-white hover:bg-purple-700'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -143,8 +143,8 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
                 href="/create-invoice"
                 className={`px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
                   currentPage === 'invoice' 
-                    ? 'bg-white text-orange-600' 
-                    : 'text-white hover:bg-orange-700'
+                    ? 'bg-white text-purple-600' 
+                    : 'text-white hover:bg-purple-700'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -157,8 +157,8 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
                 href="/dashboard"
                 className={`px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
                   currentPage === 'dashboard' 
-                    ? 'bg-white text-orange-600' 
-                    : 'text-white hover:bg-orange-700'
+                    ? 'bg-white text-purple-600' 
+                    : 'text-white hover:bg-purple-700'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -172,7 +172,7 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
             <div className="md:hidden">
               <button
                 onClick={toggleMenu}
-                className="text-white hover:bg-orange-700 p-2 rounded-lg transition-colors duration-200"
+                className="text-white hover:bg-purple-700 p-2 rounded-lg transition-colors duration-200"
                 aria-label="Toggle navigation menu"
                 aria-expanded={isOpen}
               >
@@ -192,15 +192,15 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
 
         {/* Mobile Navigation Menu */}
         {isOpen && (
-          <div ref={mobileMenuRef} className="md:hidden bg-orange-700 border-t border-orange-500 relative z-50">
+          <div ref={mobileMenuRef} className="md:hidden bg-purple-700 border-t border-purple-500 relative z-50">
             <div className="px-4 pt-2 pb-3 space-y-1">
               <Link 
                 href="/"
                 onClick={closeMenu}
                 className={`block w-full text-left px-3 py-3 rounded-lg transition-colors duration-200 ${
                   currentPage === 'home' 
-                    ? 'bg-orange-600 text-white' 
-                    : 'text-white hover:bg-orange-800'
+                    ? 'bg-purple-600 text-white' 
+                    : 'text-white hover:bg-purple-800'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -219,8 +219,8 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
                 onClick={closeMenu}
                 className={`block w-full text-left px-3 py-3 rounded-lg transition-colors duration-200 ${
                   currentPage === 'invoice' 
-                    ? 'bg-orange-600 text-white' 
-                    : 'text-white hover:bg-orange-800'
+                    ? 'bg-purple-600 text-white' 
+                    : 'text-white hover:bg-purple-800'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -239,8 +239,8 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
                 onClick={closeMenu}
                 className={`block w-full text-left px-3 py-3 rounded-lg transition-colors duration-200 ${
                   currentPage === 'dashboard' 
-                    ? 'bg-orange-600 text-white' 
-                    : 'text-white hover:bg-orange-800'
+                    ? 'bg-purple-600 text-white' 
+                    : 'text-white hover:bg-purple-800'
                 }`}
               >
                 <div className="flex items-center space-x-3">
