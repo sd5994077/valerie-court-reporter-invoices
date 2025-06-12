@@ -45,14 +45,17 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
       id="invoice-pdf-content" 
       style={{ 
         fontFamily: 'Arial, sans-serif',
-        fontSize: '14px',
-        lineHeight: '1.5',
+        fontSize: '11px',
+        lineHeight: '1.3',
         color: '#333',
         maxWidth: '8.5in',
         margin: '0 auto',
-        padding: '0.25in 0.4in 0.4in 0.4in',
+        padding: '0 0.4in',
         backgroundColor: 'white',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        pageBreakInside: 'auto',
+        orphans: '3',
+        widows: '3'
       }}
     >
       <style jsx>{`
@@ -64,9 +67,11 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'flex-start', 
-        marginBottom: '24px',
-        paddingBottom: '12px',
+        marginBottom: '8px',
+        paddingBottom: '8px',
         borderBottom: '2px solid #7c3aed',
+        pageBreakAfter: 'avoid',
+        pageBreakInside: 'avoid'
       }}>
         <div>
           <h1 style={{ 
@@ -128,7 +133,8 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         display: 'grid', 
         gridTemplateColumns: '1fr 1fr', 
         gap: '24px',
-        marginBottom: '24px',
+        marginBottom: '16px',
+        pageBreakInside: 'avoid'
       }}>
         {/* Bill To */}
         <div>
@@ -216,24 +222,27 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
       </div>
 
       {/* Line Items Table */}
-      <div style={{ marginBottom: '30px' }}>
+      <div style={{ marginBottom: '16px' }}>
         <table style={{ 
           width: '100%', 
           borderCollapse: 'collapse',
-          border: '1px solid #e5e7eb'
+          border: '1px solid #e5e7eb',
+          pageBreakInside: 'auto',
+          fontSize: '10px'
         }}>
           <thead>
             <tr style={{ 
               backgroundColor: '#f9fafb',
-              pageBreakInside: 'avoid' // Keep header together
+              pageBreakInside: 'avoid',
+              pageBreakAfter: 'avoid'
             }}>
               <th style={{ 
                 border: '1px solid #e5e7eb', 
-                padding: '14px 10px', // More comfortable padding
+                padding: '6px 8px',
                 textAlign: 'left', 
                 fontWeight: '600', 
                 color: '#333',
-                fontSize: '13px'
+                fontSize: '10px'
               }}>
                 Number
               </th>
@@ -281,44 +290,44 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
           </thead>
           <tbody>
             {lineItemsWithTotals.map((item, index) => (
-              <tr key={index}>
+              <tr key={index} style={{ pageBreakInside: 'avoid', pageBreakAfter: 'auto' }}>
                 <td style={{ 
                   border: '1px solid #e5e7eb', 
-                  padding: '12px 10px', // Comfortable row height
+                  padding: '6px 8px',
                   textAlign: 'center',
-                  fontSize: '13px'
+                  fontSize: '10px'
                 }}>
                   {item.number}
                 </td>
                 <td style={{ 
                   border: '1px solid #e5e7eb', 
-                  padding: '12px 10px',
-                  fontSize: '13px'
+                  padding: '6px 8px',
+                  fontSize: '10px'
                 }}>
                   {item.description}
                 </td>
                 <td style={{ 
                   border: '1px solid #e5e7eb', 
-                  padding: '12px 10px',
+                  padding: '6px 8px',
                   textAlign: 'center',
-                  fontSize: '13px'
+                  fontSize: '10px'
                 }}>
                   {item.quantity}
                 </td>
                 <td style={{ 
                   border: '1px solid #e5e7eb', 
-                  padding: '12px 10px',
+                  padding: '6px 8px',
                   textAlign: 'right',
-                  fontSize: '13px'
+                  fontSize: '10px'
                 }}>
                   {formatCurrency(item.rate)}
                 </td>
                 <td style={{ 
                   border: '1px solid #e5e7eb', 
-                  padding: '12px 10px',
+                  padding: '6px 8px',
                   textAlign: 'right', 
                   fontWeight: '600',
-                  fontSize: '13px'
+                  fontSize: '10px'
                 }}>
                   {formatCurrency(item.total)}
                 </td>
@@ -362,9 +371,10 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         backgroundColor: '#f0fdf4', 
         border: '1px solid #bbf7d0', 
         borderRadius: '8px', 
-        padding: '24px', // More comfortable padding
-        marginBottom: '30px',
-        pageBreakInside: 'avoid' // Keep payment options together when possible
+        padding: '12px',
+        marginBottom: '16px',
+        marginTop: '12px',
+        pageBreakInside: 'avoid'
       }}>
         <h3 style={{ 
           fontSize: '16px', 
@@ -377,7 +387,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: '1fr 1fr', 
-          gap: '24px'
+          gap: '12px'
         }}>
           {/* Venmo with QR Code */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>

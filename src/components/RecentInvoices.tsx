@@ -234,14 +234,17 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       const filename = `${invoiceData.invoiceNumber}-${cleanForFilename(clientName)}.pdf`;
 
       const opt = {
-        margin: [0.25, 0.4, 0.4, 0.4],
+        margin: [0, 0.3, 0, 0.3], // Zero top and bottom margins for maximum space
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
           scale: 2,
           useCORS: true,
           letterRendering: true,
-          logging: false
+          logging: false,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          scrollY: 0 // Avoid capturing off-position content
         },
         jsPDF: { 
           unit: 'in', 

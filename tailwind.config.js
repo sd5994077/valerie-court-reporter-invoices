@@ -32,6 +32,12 @@ module.exports = {
           900: '#7f1d1d',
         },
       },
+      scrollBehavior: ['responsive'], // Enable responsive scroll behavior
+    },
+  },
+  variants: {
+    extend: {
+      scrollBehavior: ['responsive'],
     },
   },
   plugins: [],

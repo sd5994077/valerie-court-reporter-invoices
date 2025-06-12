@@ -2,6 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent horizontal overflow and white space on mobile */
+html, body {
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+}
+
+/* Ensure main container doesn't cause horizontal scroll */
+#__next {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
+
+/* Global responsive smooth scrolling - respects user preferences */
+html {
+  scroll-behavior: smooth; /* Enable smooth scrolling site-wide */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto; /* Respect user preference for reduced motion */
+  }
+}
+
+/* More selective smooth scrolling for better performance */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Enhanced mobile optimizations */
+@media (max-width: 768px) {
+  /* iOS momentum scrolling - better performance than scroll-behavior on mobile */
+  html, body, #__next {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Only enable smooth scrolling on mobile if user hasn't requested reduced motion */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  
+  /* Prevent zoom on input focus on iOS */
+  input[type="text"], 
+  input[type="email"], 
+  input[type="tel"], 
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Improve touch targets for mobile */
+  button, input, select, textarea {
+    min-height: 44px; /* Apple's recommended touch target size */
+  }
+  
+  /* Optimize scroll container performance */
+  .line-items-container {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0); /* Forces hardware acceleration */
+  }
+}
+
 /* Custom styles for the invoice system */
 .invoice-card {
   @apply bg-white rounded-lg shadow-sm border border-gray-200;
@@ -164,4 +232,84 @@ nav *:not(a):not(button):not([tabindex]):not([role="button"]) {
 
 .success-text {
   @apply text-green-600 text-sm mt-1;
+}
+
+/* Professional focus styles for form inputs - override default thick borders */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+select:focus,
+textarea:focus {
+  outline: none !important; /* Remove default browser outline */
+  border-color: #7c3aed !important; /* Purple border to match invoice theme */
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important; /* Subtle purple glow */
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Specific styling for description inputs in line items */
+input[placeholder="Enter description"]:focus,
+.invoice-form input[type="text"]:focus,
+.invoice-form input[type="number"]:focus,
+form input[type="text"]:focus,
+form input[type="number"]:focus {
+  outline: none !important;
+  border: 2px solid #7c3aed !important; /* Force purple border */
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15) !important;
+  background-color: rgba(124, 58, 237, 0.02) !important;
+  -webkit-appearance: none !important; /* Remove iOS styling */
+  -moz-appearance: none !important; /* Remove Firefox styling */
+}
+
+/* Responsive scrollable containers - optimized for both desktop and mobile */
+.scroll-container {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(124, 58, 237, 0.3) transparent; /* Firefox */
+}
+
+/* Webkit scrollbar styling for Chrome/Safari */
+.scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(124, 58, 237, 0.3);
+  border-radius: 3px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(124, 58, 237, 0.5);
+}
+
+/* Responsive height classes for containers */
+.responsive-scroll-height {
+  max-height: 80vh; /* Default for mobile */
+}
+
+@media (min-width: 640px) {
+  .responsive-scroll-height {
+    max-height: 75vh; /* Desktop gets slightly less to accommodate UI */
+  }
+}
+
+/* Line items table container specific styling */
+#line-items-table-container {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  max-height: 60vh; /* Allows space for other form elements */
+}
+
+@media (min-width: 768px) {
+  #line-items-table-container {
+    max-height: 50vh; /* More conservative on desktop */
+  }
 }

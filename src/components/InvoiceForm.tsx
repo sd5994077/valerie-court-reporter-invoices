@@ -82,24 +82,54 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
 
   const addLineItem = () => {
     const newLineNumber = lineItems.length + 1;
-    setLineItems([...lineItems, {
+    const newLineItems = [...lineItems, {
       number: newLineNumber,
       description: '',
       quantity: 1,
       total: 0
-    }]);
+    }];
+    setLineItems(newLineItems);
     
-    // Auto-scroll within the line items table container to show the new row and any warning messages
+    // Auto-scroll with performance-conscious approach
     setTimeout(() => {
+      // Check if user prefers reduced motion
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const scrollBehavior = prefersReducedMotion ? 'auto' : 'smooth';
+      
       const tableContainer = document.getElementById('line-items-table-container');
       if (tableContainer) {
-        // Scroll to bottom to show the new row and any warning messages below it
+        // Scroll to bottom to show the new row
         tableContainer.scrollTo({
           top: tableContainer.scrollHeight,
-          behavior: 'smooth'
+          behavior: scrollBehavior
         });
       }
-    }, 100);
+      
+      // Focus on the description field of the newly added line item
+      const allDescriptionFields = document.querySelectorAll('input[placeholder="Enter description"]');
+      const newDescriptionField = allDescriptionFields[newLineItems.length - 1] as HTMLInputElement;
+      if (newDescriptionField) {
+        newDescriptionField.focus();
+        
+        // Only scroll within the container, not the entire page
+        // This prevents page jumping while maintaining focus visibility
+        const tableContainer = document.getElementById('line-items-table-container');
+        if (tableContainer && newDescriptionField) {
+          // Check if the field is visible within the container
+          const containerRect = tableContainer.getBoundingClientRect();
+          const fieldRect = newDescriptionField.getBoundingClientRect();
+          
+          // Only scroll if the field is not fully visible in the container
+          if (fieldRect.bottom > containerRect.bottom || fieldRect.top < containerRect.top) {
+            newDescriptionField.scrollIntoView({ 
+              behavior: scrollBehavior, 
+              block: 'center', // Better visibility for validation tooltips
+              inline: 'nearest'
+            });
+          }
+        }
+      }
+    }, 150);
   };
 
   const updateLineItem = (index: number, field: string, value: any) => {
@@ -308,12 +338,40 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
     return validationTrigger[fieldKey] || false;
   };
 
+  // Clear all form data
+  const handleClearDraft = () => {
+    if (confirm('Are you sure you want to clear all form data? This action cannot be undone.')) {
+      // Reset all form fields to initial state
+      setClientName('');
+      setCompany('');
+      setPhone('');
+      setEmail('');
+      setAddress('');
+      setDate(new Date().toISOString().split('T')[0]);
+      setCounty('');
+      setCaseName('');
+      setDateOfHearing('');
+      setLineItems([{ number: 1, description: '', quantity: 1, total: 0 }]);
+      setValidationTrigger({});
+      
+      // Clear any saved draft data
+      localStorage.removeItem('invoiceDraft');
+      localStorage.removeItem('editMode');
+      
+      showToastMessage('Form cleared successfully', 'success');
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Create Invoice</h1>
-        <button className="text-gray-600 hover:text-gray-800 flex items-center space-x-2">
+        <button 
+          type="button"
+          onClick={handleClearDraft}
+          className="text-gray-600 hover:text-red-600 hover:bg-red-50 flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors duration-200"
+        >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
@@ -521,7 +579,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
         </div>
 
         {/* Line Items Section */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden" id="line-items-section">
           <div className="bg-purple-600 px-6 py-4">
             <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -531,7 +589,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
             </h2>
           </div>
           <div className="p-6">
-            <div id="line-items-table-container" className="overflow-x-auto overflow-y-auto max-h-96 border border-gray-100 rounded-lg" style={{ scrollBehavior: 'smooth' }}>
+            <div id="line-items-table-container" className="overflow-x-auto overflow-y-auto max-h-96 border border-gray-100 rounded-lg pb-16" style={{ scrollBehavior: 'smooth' }}>
               <table className="w-full">
                 <thead>
                   <tr className="bg-purple-50 text-purple-700">
@@ -570,12 +628,12 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                             onBlur={() => handleFieldBlur(`description_${index}`)}
                           />
                           {shouldShowValidation(`description_${index}`) && isDescriptionRequired(item) && !item.description.trim() && (
-                            <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-1 rounded shadow-sm z-10">
+                            <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-1 rounded shadow-sm z-30">
                               Description required for billed items
                             </p>
                           )}
                           {isLineItemEmpty(item) && lineItems.length > 1 && (
-                            <div className="absolute left-0 top-full mt-1 flex items-center justify-between text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded shadow-sm z-10 w-full">
+                            <div className="absolute left-0 top-full mt-1 flex items-center justify-between text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded shadow-sm z-30 w-full">
                               <span className="flex items-center space-x-1">
                                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
@@ -604,7 +662,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                             onBlur={() => handleFieldBlur(`quantity_${index}`)}
                           />
                           {shouldShowValidation(`quantity_${index}`) && item.quantity < 1 && (
-                            <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-1 rounded shadow-sm z-10 whitespace-nowrap">
+                            <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-1 rounded shadow-sm z-30 whitespace-nowrap">
                               Quantity must be at least 1
                             </p>
                           )}

@@ -105,59 +105,141 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
     document.body.appendChild(tempContainer);
     
     // Apply print-specific optimizations to the cloned element
-    clonedElement.style.padding = '0.2in 0.4in';
+    clonedElement.style.padding = '0.1in 0.25in 0.25in 0.25in'; // Tighter top/bottom padding for better fit
     clonedElement.style.fontSize = '11px';
     clonedElement.style.lineHeight = '1.3';
     
-    // Reduce header spacing for PDF
+    // Add graceful page break controls
+    clonedElement.style.pageBreakInside = 'auto';
+    clonedElement.style.orphans = '3';
+    clonedElement.style.widows = '3';
+    
+    // Force desktop layout for PDF - override responsive classes
+    // Show desktop table (normally hidden on mobile)
+    const desktopTable = clonedElement.querySelector('.hidden.sm\\:block');
+    if (desktopTable) {
+      (desktopTable as HTMLElement).style.display = 'block';
+    }
+    
+    // Hide mobile cards (normally shown on mobile)
+    const mobileCards = clonedElement.querySelector('.sm\\:hidden');
+    if (mobileCards) {
+      (mobileCards as HTMLElement).style.display = 'none';
+    }
+    
+    // Reduce header spacing for PDF and prevent orphaning
     const header = clonedElement.querySelector('.flex.flex-col.space-y-3');
     if (header) {
       (header as HTMLElement).style.marginBottom = '8px';
+      (header as HTMLElement).style.pageBreakAfter = 'avoid';
+      (header as HTMLElement).style.pageBreakInside = 'avoid';
     }
     
-    // Optimize table spacing for PDF
+    // Prevent Bill To & Invoice Details section from breaking awkwardly
+    const billToSection = clonedElement.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2');
+    if (billToSection) {
+      (billToSection as HTMLElement).style.pageBreakInside = 'avoid';
+    }
+    
+    // Optimize table spacing for PDF and prevent row splitting
     const table = clonedElement.querySelector('table');
     if (table) {
-      table.style.fontSize = '10px';
+      table.style.fontSize = '9.5px'; // Smaller font for more rows
+      table.style.lineHeight = '1.25'; // Tighter line height
+      table.style.pageBreakInside = 'auto';
+      table.style.borderCollapse = 'collapse';
+      
+      // Prevent table header from being orphaned
+      const thead = table.querySelector('thead');
+      if (thead) {
+        (thead as HTMLElement).style.pageBreakAfter = 'avoid';
+      }
+      
+      // Prevent individual table rows from breaking
+      const rows = table.querySelectorAll('tr');
+      rows.forEach(row => {
+        (row as HTMLElement).style.pageBreakInside = 'avoid';
+        (row as HTMLElement).style.pageBreakAfter = 'auto';
+      });
+      
       const cells = table.querySelectorAll('td, th');
       cells.forEach(cell => {
-        (cell as HTMLElement).style.padding = '6px 8px';
+        (cell as HTMLElement).style.padding = '4px 6px'; // Tighter cell padding for more rows
       });
     }
     
-    // Fix payment section text overlapping
+    // Fix payment section text overlapping and prevent splitting
     const paymentSection = clonedElement.querySelector('.bg-green-50');
     if (paymentSection) {
       (paymentSection as HTMLElement).style.padding = '12px';
-      (paymentSection as HTMLElement).style.marginBottom = '16px';
+      (paymentSection as HTMLElement).style.marginBottom = '8px';
+      (paymentSection as HTMLElement).style.pageBreakInside = 'avoid';
+      (paymentSection as HTMLElement).style.marginTop = '4px'; // Much smaller gap above Payment Options
       
-      // Fix Venmo QR section spacing
-      const venmoSection = paymentSection.querySelector('.flex.flex-col.sm\\:flex-row');
-      if (venmoSection) {
-        (venmoSection as HTMLElement).style.gap = '8px';
-        (venmoSection as HTMLElement).style.alignItems = 'flex-start';
-      }
-      
-      // Compact QR code text
-      const qrText = paymentSection.querySelectorAll('p');
-      qrText.forEach(p => {
-        (p as HTMLElement).style.fontSize = '9px';
-        (p as HTMLElement).style.lineHeight = '1.2';
-        (p as HTMLElement).style.margin = '2px 0';
+      // Force override all text in payment section to be larger and clearer
+      const allElements = paymentSection.querySelectorAll('*');
+      allElements.forEach(element => {
+        const text = element.textContent || '';
+        const htmlElement = element as HTMLElement;
+        
+        // Force larger font sizes with higher specificity and better clarity
+        if (text.includes('@ValerieDeLeon-CSR') || text.includes('Valerie De Leon, CSR') || 
+            text.includes('126 Old Settlers Drive') || text.includes('San Marcos, TX')) {
+          htmlElement.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+          htmlElement.style.setProperty('font-size', '12.5px', 'important');
+          htmlElement.style.setProperty('font-weight', '500', 'important');
+          htmlElement.style.setProperty('line-height', '1.4', 'important');
+          htmlElement.style.setProperty('letter-spacing', '0.1px', 'important');
+        } else if (text.includes('Venmo') || text.includes('Mail Check To')) {
+          htmlElement.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+          htmlElement.style.setProperty('font-size', '12px', 'important');
+          htmlElement.style.setProperty('font-weight', '600', 'important');
+          htmlElement.style.setProperty('line-height', '1.3', 'important');
+          htmlElement.style.setProperty('letter-spacing', '0.1px', 'important');
+        } else if (text.trim() && text.includes('Scan QR code')) {
+          htmlElement.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+          htmlElement.style.setProperty('font-size', '10px', 'important');
+          htmlElement.style.setProperty('line-height', '1.3', 'important');
+        }
       });
       
-      // Adjust grid layout for better spacing
+      // Make the payment section display as a single flex row
       const grid = paymentSection.querySelector('.grid');
       if (grid) {
-        (grid as HTMLElement).style.gap = '12px';
+        (grid as HTMLElement).style.setProperty('display', 'flex', 'important');
+        (grid as HTMLElement).style.setProperty('flex-direction', 'row', 'important');
+        (grid as HTMLElement).style.setProperty('justify-content', 'space-between', 'important');
+        (grid as HTMLElement).style.setProperty('align-items', 'flex-start', 'important');
+        (grid as HTMLElement).style.setProperty('gap', '16px', 'important');
+      }
+      
+      // Set flex proportions: Venmo takes 2/3, Mail Check takes 1/3
+      const venmoSection = paymentSection.querySelector('.lg\\:col-span-2');
+      if (venmoSection) {
+        (venmoSection as HTMLElement).style.setProperty('flex', '2', 'important');
+      }
+
+      const mailSection = paymentSection.querySelector('.lg\\:col-span-1');
+      if (mailSection) {
+        (mailSection as HTMLElement).style.setProperty('flex', '1', 'important');
       }
     }
     
-    // Ensure signature is visible in PDF
+    // Ensure signature section is visible and not orphaned in PDF
     const signatureSection = clonedElement.querySelector('.flex.flex-col.sm\\:flex-row.sm\\:justify-between');
     if (signatureSection) {
-      (signatureSection as HTMLElement).style.marginTop = '16px';
+      (signatureSection as HTMLElement).style.marginTop = '8px'; // Tighter spacing
+      (signatureSection as HTMLElement).style.marginBottom = '6px'; // Tighter spacing
       (signatureSection as HTMLElement).style.pageBreakInside = 'avoid';
+    }
+    
+    // Prevent "Thank you" footer from being orphaned and ensure it's not cut off
+    const thankYouSection = clonedElement.querySelector('.text-center.text-gray-600');
+    if (thankYouSection) {
+      (thankYouSection as HTMLElement).style.pageBreakInside = 'avoid';
+      (thankYouSection as HTMLElement).style.marginTop = '6px'; // Tighter spacing
+      (thankYouSection as HTMLElement).style.marginBottom = '0'; // Container padding handles this
+      (thankYouSection as HTMLElement).style.fontSize = '10px';
     }
 
     // Make sure signature image is properly sized for PDF
@@ -172,7 +254,7 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
     const filename = `Invoice-${cleanForFilename(invoiceData.invoiceNumber)}-${cleanForFilename(invoiceData.manualClient?.name || 'Client')}.pdf`;
 
     const opt = {
-      margin: [0.05, 0.3, 0.3, 0.3], // Reduced top margin from 0.1 to 0.05
+      margin: [0, 0.2, 0, 0.2], // Reduced left/right margins for more content space
       filename: filename,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
@@ -181,7 +263,8 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
         letterRendering: true,
         logging: false,
         allowTaint: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        scrollY: 0 // Avoid capturing off-position content
       },
       jsPDF: { 
         unit: 'in', 
@@ -264,7 +347,7 @@ export function InvoiceDisplay({ invoiceData, actionButtons, title = "Review You
               </div>
 
               {/* Bill To & Invoice Details */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-5 mt-2 sm:mt-4">
                 {/* Bill To */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Bill To:</h3>
@@ -434,7 +517,7 @@ export function InvoiceDisplay({ invoiceData, actionButtons, title = "Review You
               </div>
 
               {/* Payment Options */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-2 sm:p-3 mb-4 sm:mb-5">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-1 sm:p-2 mb-3 sm:mb-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Payment Options:</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 sm:gap-1">
                   {/* Venmo with QR Code - Takes 2/3 of space */}
