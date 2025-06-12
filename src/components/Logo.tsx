@@ -21,14 +21,14 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
     lg: 'text-base'
   };
 
-  // Professional CSR logo design
+  // Professional template logo design
   return (
     <div className={`${sizeClasses[size]} ${className} flex items-center justify-center relative`}>
-      <div className="relative w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg">
-        {/* Business/briefcase symbol */}
-        <div className="text-white mb-1">
+      <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg">
+        {/* Generic business/document symbol */}
+        <div className="text-white">
           <svg 
-            className={`${size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : 'w-6 h-6'}`} 
+            className={`${size === 'sm' ? 'w-6 h-6' : size === 'md' ? 'w-8 h-8' : 'w-10 h-10'}`} 
             fill="currentColor" 
             viewBox="0 0 24 24"
           >
@@ -37,11 +37,11 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
           </svg>
         </div>
         
-        {/* Professional Text */}
-        <div className="text-center">
-          <div className={`font-bold text-white leading-none ${size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-sm'}`}>
+        {/* Badge with text */}
+        <div className={`absolute -bottom-1 -right-1 bg-white rounded-full ${size === 'sm' ? 'w-5 h-5' : size === 'md' ? 'w-6 h-6' : 'w-7 h-7'} flex items-center justify-center shadow-md`}>
+          <span className={`font-bold text-purple-600 ${size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-sm'}`}>
             {branding.styling.logoText}
-          </div>
+          </span>
         </div>
       </div>
     </div>
