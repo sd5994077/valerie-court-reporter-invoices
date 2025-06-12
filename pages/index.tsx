@@ -8,11 +8,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Test Environment Banner */}
-      <div className="bg-red-600 text-white text-center py-2 px-4 font-semibold text-sm">
-        🚧 TEST ENVIRONMENT - This is not the production system 🚧
-      </div>
-      
       <MobileNavigation currentPage="home" />
 
       {/* Main Content */}

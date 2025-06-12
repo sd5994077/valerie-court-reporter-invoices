@@ -1,7 +1,7 @@
 export const brandingConfig = {
   business: {
-    name: "Your Business Name ",
-    tagline: "Your Professional Tagline", 
+    name: "[TEST] Your Business Name [TEST]",
+    tagline: "[TEST ENVIRONMENT] Your Professional Tagline", 
     type: "[Service Type]",
     ownerName: "[Your Full Name]",
     licenseNumber: "[Your License #]",
@@ -33,13 +33,13 @@ export const brandingConfig = {
   invoice: {
     dueDays: 30,
     taxRate: 0,
-    invoicePrefix: "VDL"
+    invoicePrefix: "TEST"
   },
   styling: {
-    primaryColor: "#7C3AED", // Professional purple
+    primaryColor: "#EA580C", // Orange theme for test environment
     secondaryColor: "#FB923C",
-    accentColor: "#059669", // Green accent for payment sections
-    logoText: "" // Professional branding
+    accentColor: "#DC2626", // Red accent for test visibility
+    logoText: "[TEST]" // Clear test indicator
   }
 };
 
@@ -48,8 +48,8 @@ export const getBranding = () => brandingConfig;
 // Example configuration for Court Reporters:
 export const courtReporterExample = {
   business: {
-    name: "Jane Smith, CSR #12345",
-    tagline: "Professional Court Reporting Services", 
+    name: "[TEST] Jane Smith, CSR #12345",
+    tagline: "[TEST] Professional Court Reporting Services", 
     type: "Legal Services",
     ownerName: "Jane Smith",
     licenseNumber: "#12345",

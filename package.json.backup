@@ -1,15 +1,16 @@
 {
-  "name": "valerie-deleon-invoice-system",
-  "version": "1.0.0",
+  "name": "professional-invoice-system-template-test",
+  "version": "1.0.0-test",
   "private": true,
-  "description": "Professional invoice management system for Valerie De Leon, CSR #13025",
+  "description": "TEST VERSION - A professional invoice management system template for service providers",
   "keywords": [
     "invoice",
     "billing",
     "professional",
     "template",
     "nextjs",
-    "typescript"
+    "typescript",
+    "test"
   ],
   "scripts": {
     "dev": "next dev",
