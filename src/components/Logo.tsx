@@ -21,27 +21,30 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
     lg: 'text-base'
   };
 
-  // Professional template logo design
+  // Professional CSR logo design
   return (
     <div className={`${sizeClasses[size]} ${className} flex items-center justify-center relative`}>
-      <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg">
-        {/* Generic business/document symbol */}
-        <div className="text-white">
+      <div className="relative w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg">
+        {/* Document/Court symbol */}
+        <div className="text-white mb-1">
           <svg 
-            className={`${size === 'sm' ? 'w-6 h-6' : size === 'md' ? 'w-8 h-8' : 'w-10 h-10'}`} 
+            className={`${size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : 'w-6 h-6'}`} 
             fill="currentColor" 
             viewBox="0 0 24 24"
           >
-            <path d="M21 7h-4l-2-2H9L7 7H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6h1a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM6 9h12v8H6V9zm4-4h4l1 1H9l1-1z"/>
-            <path d="M8 12h8v2H8zM8 15h5v1H8z"/>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10,9 9,9 8,9"/>
           </svg>
         </div>
         
-        {/* Test Badge */}
-        <div className={`absolute -bottom-1 -right-1 bg-white rounded-full ${size === 'sm' ? 'w-5 h-5' : size === 'md' ? 'w-6 h-6' : 'w-7 h-7'} flex items-center justify-center shadow-md`}>
-          <span className={`font-bold text-purple-600 ${size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-sm'}`}>
+        {/* Professional Text */}
+        <div className="text-center">
+          <div className={`font-bold text-white leading-none ${size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-sm'}`}>
             {branding.styling.logoText}
-          </span>
+          </div>
         </div>
       </div>
     </div>

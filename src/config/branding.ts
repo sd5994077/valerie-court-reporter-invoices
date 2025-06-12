@@ -39,7 +39,7 @@ export const brandingConfig = {
     primaryColor: "#7C3AED", // Professional purple
     secondaryColor: "#A855F7", // Purple secondary
     accentColor: "#059669", // Green accent for payment sections
-    logoText: "VDL-CSR" // Professional branding
+    logoText: "DL CSR" // Professional branding
   }
 };
 
