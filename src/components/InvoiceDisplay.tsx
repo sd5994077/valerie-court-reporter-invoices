@@ -135,10 +135,13 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
       (header as HTMLElement).style.pageBreakInside = 'avoid';
     }
     
-    // Prevent Bill To & Invoice Details section from breaking awkwardly
-    const billToSection = clonedElement.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2');
+    // Prevent Bill To & Invoice Details section from breaking awkwardly and ensure side-by-side layout
+    const billToSection = clonedElement.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
     if (billToSection) {
       (billToSection as HTMLElement).style.pageBreakInside = 'avoid';
+      (billToSection as HTMLElement).style.setProperty('display', 'grid', 'important');
+      (billToSection as HTMLElement).style.setProperty('grid-template-columns', '1fr 1fr', 'important');
+      (billToSection as HTMLElement).style.setProperty('gap', '24px', 'important');
     }
     
     // Optimize table spacing for PDF and prevent row splitting
@@ -271,6 +274,12 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
     const invoiceDate = new Date(invoiceData.date);
     const dateStr = invoiceDate.toISOString().split('T')[0]; // YYYY-MM-DD format
     const clientName = invoiceData.manualClient?.name || invoiceData.manualClient?.company || 'Client';
+    console.log('🔍 PDF Filename Debug:', {
+      clientName,
+      originalName: invoiceData.manualClient?.name,
+      originalCompany: invoiceData.manualClient?.company,
+      cleanedName: cleanForFilename(clientName)
+    });
     const filename = `Invoice-${dateStr}-${cleanForFilename(clientName)}.pdf`;
 
     const opt = {
@@ -367,7 +376,7 @@ export function InvoiceDisplay({ invoiceData, actionButtons, title = "Review You
               </div>
 
               {/* Bill To & Invoice Details */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-5 mt-2 sm:mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-5 mt-2 sm:mt-4">
                 {/* Bill To */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Bill To:</h3>

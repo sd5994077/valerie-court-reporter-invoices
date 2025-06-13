@@ -233,6 +233,12 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       const invoiceDate = new Date(invoiceData.date);
       const dateStr = invoiceDate.toISOString().split('T')[0]; // YYYY-MM-DD format
       const clientName = invoiceData.manualClient?.name || invoiceData.manualClient?.company || 'Client';
+      console.log('🔍 Recent Invoices PDF Filename Debug:', {
+        clientName,
+        originalName: invoiceData.manualClient?.name,
+        originalCompany: invoiceData.manualClient?.company,
+        cleanedName: cleanForFilename(clientName)
+      });
       const filename = `Invoice-${dateStr}-${cleanForFilename(clientName)}.pdf`;
 
       const opt = {
