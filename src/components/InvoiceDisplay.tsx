@@ -127,18 +127,18 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
       (mobileCards as HTMLElement).style.display = 'none';
     }
     
-    // Reduce header spacing for PDF and prevent orphaning
+    // Reduce header spacing for PDF but allow breaking if needed
     const header = clonedElement.querySelector('.flex.flex-col.space-y-3');
     if (header) {
       (header as HTMLElement).style.marginBottom = '8px';
       (header as HTMLElement).style.pageBreakAfter = 'avoid';
-      (header as HTMLElement).style.pageBreakInside = 'avoid';
+      // Remove pageBreakInside='avoid' to allow multi-page PDFs
     }
     
-    // Prevent Bill To & Invoice Details section from breaking awkwardly and ensure side-by-side layout
+    // Ensure side-by-side layout for Bill To & Invoice Details but allow page breaks
     const billToSection = clonedElement.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
     if (billToSection) {
-      (billToSection as HTMLElement).style.pageBreakInside = 'avoid';
+      (billToSection as HTMLElement).style.pageBreakInside = 'auto'; // Allow breaking
       (billToSection as HTMLElement).style.setProperty('display', 'grid', 'important');
       (billToSection as HTMLElement).style.setProperty('grid-template-columns', '1fr 1fr', 'important');
       (billToSection as HTMLElement).style.setProperty('gap', '24px', 'important');
@@ -171,12 +171,12 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
       });
     }
     
-    // Fix payment section text overlapping and prevent splitting
+    // Fix payment section text overlapping but allow page breaks
     const paymentSection = clonedElement.querySelector('.bg-green-50');
     if (paymentSection) {
       (paymentSection as HTMLElement).style.padding = '12px';
       (paymentSection as HTMLElement).style.marginBottom = '8px';
-      (paymentSection as HTMLElement).style.pageBreakInside = 'avoid';
+      (paymentSection as HTMLElement).style.pageBreakInside = 'auto'; // Allow breaking
       (paymentSection as HTMLElement).style.marginTop = '4px'; // Much smaller gap above Payment Options
       
       // Force desktop layout for Payment Options in PDF
@@ -244,18 +244,18 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
       });
     }
     
-    // Ensure signature section is visible and not orphaned in PDF
+    // Keep signature section together (small element, safe to avoid breaking)
     const signatureSection = clonedElement.querySelector('.flex.flex-col.sm\\:flex-row.sm\\:justify-between');
     if (signatureSection) {
       (signatureSection as HTMLElement).style.marginTop = '8px'; // Tighter spacing
       (signatureSection as HTMLElement).style.marginBottom = '6px'; // Tighter spacing
-      (signatureSection as HTMLElement).style.pageBreakInside = 'avoid';
+      (signatureSection as HTMLElement).style.pageBreakInside = 'avoid'; // Keep - small element
     }
     
-    // Prevent "Thank you" footer from being orphaned and ensure it's not cut off
+    // Keep "Thank you" footer together (small element, safe to avoid breaking)
     const thankYouSection = clonedElement.querySelector('.text-center.text-gray-600');
     if (thankYouSection) {
-      (thankYouSection as HTMLElement).style.pageBreakInside = 'avoid';
+      (thankYouSection as HTMLElement).style.pageBreakInside = 'avoid'; // Keep - small element
       (thankYouSection as HTMLElement).style.marginTop = '6px'; // Tighter spacing
       (thankYouSection as HTMLElement).style.marginBottom = '0'; // Container padding handles this
       (thankYouSection as HTMLElement).style.fontSize = '10px';
@@ -283,7 +283,7 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
     const filename = `Invoice-${dateStr}-${cleanForFilename(clientName)}.pdf`;
 
     const opt = {
-      margin: [0, 0.2, 0, 0.2], // Reduced left/right margins for more content space
+      margin: [0.25, 0.3, 0.25, 0.3], // Better margins for multi-page support
       filename: filename,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
@@ -299,6 +299,9 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
         unit: 'in', 
         format: 'letter', 
         orientation: 'portrait'
+      },
+      pagebreak: { 
+        mode: ['css', 'legacy', 'avoid-all'] // Enable proper page breaking
       }
     };
 

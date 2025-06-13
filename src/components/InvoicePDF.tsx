@@ -70,8 +70,8 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         marginBottom: '8px',
         paddingBottom: '8px',
         borderBottom: '2px solid #7c3aed',
-        pageBreakAfter: 'avoid',
-        pageBreakInside: 'avoid'
+        pageBreakAfter: 'avoid'
+        // Removed pageBreakInside: 'avoid' to allow multi-page PDFs
       }}>
         <div>
           <h1 style={{ 
@@ -133,8 +133,8 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         display: 'grid', 
         gridTemplateColumns: '1fr 1fr', 
         gap: '24px',
-        marginBottom: '16px',
-        pageBreakInside: 'avoid'
+        marginBottom: '16px'
+        // Removed pageBreakInside: 'avoid' to allow breaking
       }}>
         {/* Bill To */}
         <div>
@@ -373,8 +373,8 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         borderRadius: '8px', 
         padding: '12px',
         marginBottom: '16px',
-        marginTop: '12px',
-        pageBreakInside: 'avoid'
+        marginTop: '12px'
+        // Removed pageBreakInside: 'avoid' to allow breaking
       }}>
         <h3 style={{ 
           fontSize: '16px', 

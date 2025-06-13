@@ -242,7 +242,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       const filename = `Invoice-${dateStr}-${cleanForFilename(clientName)}.pdf`;
 
       const opt = {
-        margin: [0, 0.3, 0, 0.3], // Zero top and bottom margins for maximum space
+        margin: [0.25, 0.3, 0.25, 0.3], // Better margins for multi-page support
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
@@ -258,6 +258,9 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
           unit: 'in', 
           format: 'letter', 
           orientation: 'portrait'
+        },
+        pagebreak: { 
+          mode: ['css', 'legacy', 'avoid-all'] // Enable proper page breaking
         }
       };
 
