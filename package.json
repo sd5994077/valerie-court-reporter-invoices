@@ -16,7 +16,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "prepare-production": "node scripts/prepare-production.js"
+    "prepare-production": "node scripts/prepare-production.js",
+    "deploy-clean": "node scripts/deploy-production-clean.js"
   },
   "dependencies": {
     "@types/pg": "^8.15.4",

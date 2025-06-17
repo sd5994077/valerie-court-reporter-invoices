@@ -1,4 +1,9 @@
 export const brandingConfig = {
+  // Cache busting metadata
+  _buildTimestamp: Date.now(),
+  _version: "1.0.1750095241",
+  _lastUpdated: "2025-06-16T17:34:01.720Z",
+  
   business: {
     name: "Valerie De Leon, CSR #13025",
     tagline: "Professional Court Reporting Services", 
@@ -43,7 +48,13 @@ export const brandingConfig = {
   }
 };
 
-export const getBranding = () => brandingConfig;
+export const getBranding = () => {
+  // Force fresh evaluation in production
+  if (typeof window !== 'undefined') {
+    console.log(`🏷️ Branding loaded - Build: ${brandingConfig._buildTimestamp}, Version: ${brandingConfig._version}`);
+  }
+  return brandingConfig;
+};
 
 // Example configuration for Court Reporters:
 export const courtReporterExample = {

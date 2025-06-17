@@ -229,12 +229,20 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         throw new Error('Failed to render PDF content');
       }
 
-      // Generate filename: INV-YYYY-0000-ClientName.pdf
-      const clientName = invoiceData.manualClient?.name || invoiceData.manualClient?.company || 'Unknown-Client';
-      const filename = `${invoiceData.invoiceNumber}-${cleanForFilename(clientName)}.pdf`;
+      // Generate filename: Invoice-YYYY-MM-DD-ClientName.pdf
+      const invoiceDate = new Date(invoiceData.date);
+      const dateStr = invoiceDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const clientName = invoiceData.manualClient?.name || invoiceData.manualClient?.company || 'Client';
+      console.log('🔍 Recent Invoices PDF Filename Debug:', {
+        clientName,
+        originalName: invoiceData.manualClient?.name,
+        originalCompany: invoiceData.manualClient?.company,
+        cleanedName: cleanForFilename(clientName)
+      });
+      const filename = `Invoice-${dateStr}-${cleanForFilename(clientName)}.pdf`;
 
       const opt = {
-        margin: [0, 0.3, 0, 0.3], // Zero top and bottom margins for maximum space
+        margin: [0.25, 0.3, 0.25, 0.3], // Better margins for multi-page support
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
@@ -250,6 +258,9 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
           unit: 'in', 
           format: 'letter', 
           orientation: 'portrait'
+        },
+        pagebreak: { 
+          mode: ['css', 'legacy', 'avoid-all'] // Enable proper page breaking
         }
       };
 
