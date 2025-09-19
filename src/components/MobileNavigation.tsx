@@ -63,8 +63,9 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
             <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
               <Link 
                 href="/"
-                className={`text-white hover:bg-white hover:text-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-offset-2 focus:ring-offset-purple-600 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center space-x-2 ${
-                  currentPage === 'home' ? 'bg-white text-purple-600' : ''
+                aria-current={currentPage === 'home' ? 'page' : undefined}
+                className={`text-white hover:bg-white hover:text-purple-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-purple-600 rounded-lg px-3 py-2 transition-all duration-200 flex items-center space-x-2 ${
+                  currentPage === 'home' ? 'bg-white/10 font-semibold' : ''
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -75,8 +76,9 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
               
               <Link 
                 href="/create-invoice"
-                className={`text-white hover:bg-white hover:text-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-offset-2 focus:ring-offset-purple-600 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center space-x-2 ${
-                  currentPage === 'invoice' ? 'bg-white text-purple-600' : ''
+                aria-current={currentPage === 'invoice' ? 'page' : undefined}
+                className={`text-white hover:bg-white hover:text-purple-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-purple-600 rounded-lg px-3 py-2 transition-all duration-200 flex items-center space-x-2 ${
+                  currentPage === 'invoice' ? 'bg-white/10 font-semibold' : ''
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -87,8 +89,9 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
 
               <Link 
                 href="/dashboard"
-                className={`text-white hover:bg-white hover:text-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-offset-2 focus:ring-offset-purple-600 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center space-x-2 ${
-                  currentPage === 'dashboard' ? 'bg-white text-purple-600' : ''
+                aria-current={currentPage === 'dashboard' ? 'page' : undefined}
+                className={`text-white hover:bg-white hover:text-purple-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-purple-600 rounded-lg px-3 py-2 transition-all duration-200 flex items-center space-x-2 ${
+                  currentPage === 'dashboard' ? 'bg-white/10 font-semibold' : ''
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -126,7 +129,7 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
               <Link 
                 href="/"
                 onClick={closeMenu}
-                className={`block w-full text-left text-white hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-offset-2 focus:ring-offset-purple-700 rounded-lg px-3 py-3 transition-colors duration-200 ${
+                className={`block w-full text-left text-white hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-purple-700 rounded-lg px-3 py-3 transition-all duration-200 ${
                   currentPage === 'home' ? 'bg-purple-600' : ''
                 }`}
               >
@@ -141,7 +144,7 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
               <Link 
                 href="/create-invoice"
                 onClick={closeMenu}
-                className={`block w-full text-left text-white hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-offset-2 focus:ring-offset-purple-700 rounded-lg px-3 py-3 transition-colors duration-200 ${
+                className={`block w-full text-left text-white hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-purple-700 rounded-lg px-3 py-3 transition-all duration-200 ${
                   currentPage === 'invoice' ? 'bg-purple-600' : ''
                 }`}
               >
@@ -156,7 +159,7 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
               <Link 
                 href="/dashboard"
                 onClick={closeMenu}
-                className={`block w-full text-left text-white hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-offset-2 focus:ring-offset-purple-700 rounded-lg px-3 py-3 transition-colors duration-200 ${
+                className={`block w-full text-left text-white hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-purple-700 rounded-lg px-3 py-3 transition-all duration-200 ${
                   currentPage === 'dashboard' ? 'bg-purple-600' : ''
                 }`}
               >
