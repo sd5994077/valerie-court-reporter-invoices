@@ -211,12 +211,6 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
 
   return (
     <>
-      {/* Google Fonts */}
-      <link 
-        href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" 
-        rel="stylesheet" 
-      />
-      
       <div className="min-h-screen bg-gray-50">
         {/* Header with Action Buttons */}
         <div className="bg-white shadow-sm">

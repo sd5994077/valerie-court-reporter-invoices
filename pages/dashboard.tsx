@@ -55,6 +55,7 @@ export default function Dashboard() {
     } else {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allInvoices, selectedYear]);
 
   const loadRawData = () => {

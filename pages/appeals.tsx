@@ -481,11 +481,6 @@ export default function AppealsPage() {
             updateAppeal(editing.id, { extensions: newExts });
             setEditing({ ...editing, extensions: newExts });
           }}
-          onUpdateExtensionDate={(extId, date) => {
-            const newExts = editing.extensions.map((e) => (e.id === extId ? { ...e, requestedOn: date } : e));
-            updateAppeal(editing.id, { extensions: newExts });
-            setEditing({ ...editing, extensions: newExts });
-          }}
         />
       )}
     </div>

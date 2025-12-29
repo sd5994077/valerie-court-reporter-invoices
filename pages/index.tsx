@@ -15,7 +15,7 @@ export default function HomePage() {
         {/* Welcome Header */}
         <div className="text-center mb-8 sm:mb-12 animate-in fade-in duration-700">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-purple-600 mb-2 sm:mb-4">
-            Welcome to Valerie's Invoicing
+            Welcome to Valerie&apos;s Invoicing
           </h2>
           <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto px-4">
             Professional invoice management for court reporting services
