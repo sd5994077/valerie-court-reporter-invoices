@@ -47,3 +47,16 @@
   - Adding a line item shows the full “Empty” warning and Remove action; no clipping.
 
 
+### 2025-09-19 — Venmo QR not loading due to wrong extension
+
+- Issue: Venmo QR image not displayed on Review Invoice. Component referenced `.png` while actual file was `.jpg` in `public/assets`.
+- Impact: Placeholder “QR not found” box shown; user could not scan to pay.
+- Root cause: Hardcoded path `/assets/Venmo-Val.png` did not match `Venmo-Val.jpg`.
+- Affected file:
+  - `src/components/VenmoQRCode.tsx`
+- Fix implemented:
+  - Default to `/assets/Venmo-Val.jpg` and auto-fallback to `.png` on error.
+  - Increased QR size to 150px and applied stronger purple tint to match branding.
+- Verification:
+  - QR renders from `.jpg` and still works if only `.png` exists.
+

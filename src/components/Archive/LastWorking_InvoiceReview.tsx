@@ -41,25 +41,45 @@ interface FinalizedInvoice extends InvoiceFormData {
 const generatePDF = async (invoiceData: InvoiceFormData) => {
   try {
     const html2pdf = (await import('html2pdf.js')).default;
-    // Always render the compact one-pager PDF off-screen
+    
+    // Prefer using the live review DOM to ensure pixel parity with Review screen
+    const liveInvoice = document.getElementById('invoice-content');
+    let pdfElement: HTMLElement | null = null;
     let tempContainer: HTMLDivElement | null = null;
-    const React = (await import('react')).default;
-    const ReactDOM = (await import('react-dom/client')).default;
-    const { InvoicePDFOnePager } = await import('./InvoicePDFOnePager');
 
-    tempContainer = document.createElement('div');
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '-9999px';
-    document.body.appendChild(tempContainer);
+    if (liveInvoice) {
+      // Clone the live node into an offscreen container so we don't disrupt the UI
+      tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '-9999px';
+      tempContainer.style.background = '#ffffff';
+      document.body.appendChild(tempContainer);
 
-    const root = ReactDOM.createRoot(tempContainer);
-    await new Promise<void>((resolve) => {
-      root.render(React.createElement(InvoicePDFOnePager, { invoiceData }));
-      setTimeout(resolve, 100);
-    });
-    const pdfElement = tempContainer.querySelector('#invoice-pdf-content') as HTMLElement | null;
-    if (!pdfElement) throw new Error('Failed to render PDF content');
+      const clone = liveInvoice.cloneNode(true) as HTMLElement;
+      clone.id = 'invoice-pdf-content';
+      tempContainer.appendChild(clone);
+      pdfElement = clone;
+    } else {
+      // Fallback: render the dedicated PDF component off-screen
+      const React = (await import('react')).default;
+      const ReactDOM = (await import('react-dom/client')).default;
+      const { InvoicePDF } = await import('./InvoicePDF');
+
+      tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '-9999px';
+      document.body.appendChild(tempContainer);
+
+      const root = ReactDOM.createRoot(tempContainer);
+      await new Promise<void>((resolve) => {
+        root.render(React.createElement(InvoicePDF, { invoiceData }));
+        setTimeout(resolve, 100);
+      });
+      pdfElement = tempContainer.querySelector('#invoice-pdf-content');
+      if (!pdfElement) throw new Error('Failed to render PDF content');
+    }
 
     const opt = {
       margin: [0.25, 0.4, 0.4, 0.4],

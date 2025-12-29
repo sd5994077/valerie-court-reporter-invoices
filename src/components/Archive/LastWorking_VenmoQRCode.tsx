@@ -3,20 +3,17 @@ import React from 'react';
 type VenmoQRCodeProps = {
   hideCaption?: boolean;
   sizePx?: number;
-  tight?: boolean; // remove inner padding so QR fills the wrapper
-  scale?: number; // scale image inside container to reduce white margins
 };
 
-export function VenmoQRCode({ hideCaption = false, sizePx = 180, tight = false, scale = 1 }: VenmoQRCodeProps) {
+export function VenmoQRCode({ hideCaption = false, sizePx = 180 }: VenmoQRCodeProps) {
   const qrSrc = "/assets/Venmo-Val.jpg"; // Use existing JPG in public/assets
   return (
-    <div className={`bg-white ${tight ? '' : 'p-1'} rounded-lg border-2 border-purple-200 shadow-sm`} style={{ width: sizePx + (tight ? 4 : 8), boxSizing: 'content-box' }}>
+    <div className="bg-white p-1 rounded-lg border-2 border-purple-200 shadow-sm" style={{ width: sizePx + 8, boxSizing: 'content-box' }}>
       <div className="bg-white flex items-center justify-center overflow-hidden rounded-md" style={{ width: sizePx, height: sizePx }}>
         <img
           src={qrSrc}
           alt="Venmo QR Code"
           className="w-full h-full object-cover"
-          style={{ transform: `scale(${scale})` }}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             // Try alternate extension once before showing fallback message
