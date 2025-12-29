@@ -129,6 +129,7 @@ Go to **Appeals** and test:
 - create a new appeal
 - confirm it appears in the correct column
   - drag/drop between columns (desktop) or **use the dropdown menu on the card** to move it (mobile)
+  - **click anywhere on a card** to open the full details/edit modal
   - open/edit an appeal and:
     - confirm the modal scrolls if content is long (especially on mobile)
     - add an extension (try multiple, up to 3)

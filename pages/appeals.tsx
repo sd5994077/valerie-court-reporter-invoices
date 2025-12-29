@@ -543,67 +543,41 @@ function AppealCard({
     <div
       draggable
       onDragStart={(e) => onDragStart(e, appeal.id)}
-      className={`group rounded-xl ${getBackgroundClass(appeal)} p-3 shadow hover:shadow-md border ${getBorderClass(appeal)}`}
+      onClick={onEdit}
+      className={`group rounded-xl ${getBackgroundClass(appeal)} p-3 shadow hover:shadow-md border ${getBorderClass(appeal)} cursor-pointer relative`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="font-semibold text-gray-900">{appeal.style || 'Untitled Case'}</div>
-          <div className="text-xs text-gray-500">Court of Appeals #: {appeal.courtOfAppealsNumber || '—'}</div>
-          <div className="text-xs text-gray-500">Trial Court Case #: {appeal.trialCourtCaseNumber || '—'}</div>
-        </div>
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
-          <button onClick={onEdit} className="text-gray-400 hover:text-purple-600" title="Edit">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487 19.5 7.125m-2.638-2.638L8.25 13.098V15.75h2.652l8.612-8.612m-2.638-2.651a1.875 1.875 0 1 1 2.652 2.652M7.5 19.5h9"/></svg>
-          </button>
-          <button onClick={onDelete} className="text-gray-400 hover:text-red-600" title="Delete">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
-          </button>
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-gray-900 leading-tight mb-1">{appeal.style || 'Untitled Case'}</div>
+          <div className="text-xs text-gray-500 truncate">
+            <span className="font-medium text-gray-600">COA:</span> {appeal.courtOfAppealsNumber || '—'} 
+            <span className="mx-1.5 text-gray-300">|</span> 
+            <span className="font-medium text-gray-600">Trial:</span> {appeal.trialCourtCaseNumber || '—'}
+          </div>
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-lg bg-gray-50 p-2">
-          <div className="text-gray-500">Requester</div>
-          <div className="font-medium text-gray-800 truncate">{appeal.requesterName}</div>
+      <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center gap-2">
+           {dLeft < 0 ? (
+            <Badge tone="red">Past due {Math.abs(dLeft)}d</Badge>
+          ) : dLeft <= 7 ? (
+            <Badge tone="red">{dLeft}d left</Badge>
+          ) : dLeft <= 15 ? (
+            <Badge tone="yellow">{dLeft}d left</Badge>
+          ) : (
+            <Badge tone="green">{dLeft}d left</Badge>
+          )}
+          <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200" title="Extensions Used">
+            Ext: {appeal.extensions.length}/3
+          </span>
         </div>
-        <div className="rounded-lg bg-gray-50 p-2">
-          <div className="text-gray-500">Extensions Used</div>
-          <div className="font-medium text-gray-800">{appeal.extensions.length}/3</div>
-        </div>
-      </div>
 
-      <div className="mt-2 flex items-center gap-2">
-        {dLeft < 0 ? (
-          <Badge tone="red">Past due by {Math.abs(dLeft)}d</Badge>
-        ) : dLeft <= 7 ? (
-          <Badge tone="red">{dLeft}d left</Badge>
-        ) : dLeft <= 15 ? (
-          <Badge tone="yellow">{dLeft}d left</Badge>
-        ) : (
-          <Badge tone="green">{dLeft}d left</Badge>
-        )}
-        <Badge>Eff. deadline: {eff.toLocaleDateString()}</Badge>
-      </div>
-
-      {appeal.notes && (
-        <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{appeal.notes}</div>
-      )}
-
-      <div className="mt-3 flex items-center justify-between">
-        <button
-          onClick={onEdit}
-          className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-gray-50 disabled:opacity-50"
-          disabled={extLeft <= 0}
-          title={extLeft > 0 ? 'Edit to add extension' : 'Max extensions reached'}
-        >
-          +30d Extension ({extLeft} left)
-        </button>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <select
-            className="text-xs sm:text-sm rounded-lg border px-2 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="text-xs sm:text-sm rounded-lg border px-2 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 max-w-[100px]"
             value={appeal.status}
             onChange={(e) => onUpdate({ status: e.target.value as AppealStatus })}
-            onClick={(e) => e.stopPropagation()} // Prevent drag/click conflicts
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
