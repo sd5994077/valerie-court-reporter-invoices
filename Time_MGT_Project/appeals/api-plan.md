@@ -19,3 +19,4 @@
 - Replace localStorage with DB via adapter
 - Consider soft delete (archived) vs hard delete
 - Add audit log events for create/update/extension
+

@@ -39,3 +39,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
   res.send(lines.join('\r\n'));
 }
+
+
+
+

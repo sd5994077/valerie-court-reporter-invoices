@@ -34,6 +34,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
   }));
   
   const grandTotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
+  const includeJudgeSignature = !!invoiceData.customFields?.includeJudgeSignature;
   
   // Compact mode for long invoices to keep high-quality one-page output when possible
   const COMPACT_THRESHOLD = 12;
@@ -83,163 +84,80 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         }
       `}</style>
 
-      {/* Header */}
+      {/* Header - Centered Court Reporter Information */}
       <div className="no-break" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start', 
-        marginBottom: dense ? '18px' : '24px',
-        paddingBottom: '12px',
+        textAlign: 'center',
+        marginBottom: dense ? '20px' : '28px',
+        paddingBottom: '16px',
         borderBottom: '2px solid #7c3aed',
       }}>
-        <div>
-          <h1 style={{ 
-            fontSize: '28px', 
-            fontWeight: 'bold', 
-            color: '#7c3aed', 
-            margin: '0 0 8px 0'
-          }}>
-            Court Reporter Invoice
-          </h1>
-          <p style={{ 
-            color: '#666', 
-            fontSize: '16px',
-            margin: '0'
-          }}>
-            {invoiceData.invoiceNumber}
-          </p>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <h2 style={{ 
-            fontSize: '20px', 
-            fontWeight: 'bold', 
-            color: '#7c3aed', 
-            margin: '0 0 4px 0'
-          }}>
-            Valerie De Leon, CSR #13025
-          </h2>
-          <p style={{ 
-            color: '#666', 
-            fontWeight: '500', 
-            margin: '0 0 8px 0'
-          }}>
-            126 Old Settlers Drive, San Marcos, TX 78666
-          </p>
-          <p style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'flex-end', 
-            gap: '8px' 
-          }}>
-            <svg 
-              width="12" 
-              height="12" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2"
-              style={{ color: 'rgb(107, 114, 128)' }}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-            </svg>
-            <span>valeriedeleon.csr@gmail.com</span>
-          </p>
-        </div>
+        <h1 style={{ 
+          fontSize: '22px', 
+          fontWeight: 'bold', 
+          color: '#333', 
+          margin: '0 0 6px 0'
+        }}>
+          Valerie DeLeon, CSR
+        </h1>
+        <p style={{ 
+          color: '#666', 
+          fontSize: '14px',
+          margin: '0 0 2px 0'
+        }}>
+          126 Old Settlers Drive
+        </p>
+        <p style={{ 
+          color: '#666', 
+          fontSize: '14px',
+          margin: '0 0 2px 0'
+        }}>
+          San Marcos, Texas 78666
+        </p>
+        <p style={{ 
+          color: '#666', 
+          fontSize: '14px',
+          margin: '0 0 2px 0'
+        }}>
+          512-878-3327
+        </p>
+        <p style={{ 
+          color: '#666', 
+          fontSize: '14px',
+          margin: '0'
+        }}>
+          valeriedeleon.csr@gmail.com
+        </p>
       </div>
 
-      {/* Bill To & Invoice Details */}
+      {/* Invoice Date and Number - Same Line */}
       <div className="no-break" style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
-        gap: dense ? '18px' : '24px',
         marginBottom: dense ? '18px' : '24px',
+        paddingBottom: '12px',
+        borderBottom: '1px solid #e5e7eb'
       }}>
-        {/* Bill To */}
-        <div>
-          <h3 style={{ 
-            fontSize: '16px', 
-            fontWeight: '600', 
-            color: '#333', 
-            margin: '0 0 12px 0'
-          }}>
-            Bill To:
-          </h3>
-          <div style={{ color: '#666', lineHeight: '1.6' }}>
-            {invoiceData.manualClient?.company && (
-              <p style={{ fontWeight: '500', margin: '0 0 4px 0' }}>
-                {invoiceData.manualClient.company}
-              </p>
-            )}
-            <p style={{ fontWeight: '500', margin: '0 0 4px 0' }}>
-              {invoiceData.manualClient?.name?.replace(/\s+/g, ' ').trim()}
-            </p>
-            {invoiceData.manualClient?.address && (
-              <p style={{ 
-                margin: '0 0 4px 0',
-                whiteSpace: 'pre-line'
-              }}>
-                {invoiceData.manualClient.address}
-              </p>
-            )}
-            {invoiceData.manualClient?.email && (
-              <p style={{ margin: '0 0 4px 0' }}>
-                {invoiceData.manualClient.email}
-              </p>
-            )}
-            {invoiceData.manualClient?.phone && (
-              <p style={{ margin: '0' }}>
-                {invoiceData.manualClient.phone}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Invoice Details */}
-        <div>
-          <h3 style={{ 
-            fontSize: '16px', 
-            fontWeight: '600', 
-            color: '#333', 
-            margin: '0 0 12px 0'
-          }}>
-            Invoice Details:
-          </h3>
-          <div style={{ lineHeight: '1.8' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ color: '#666', fontWeight: '500' }}>Invoice Number:</span>
-              <span style={{ color: '#333' }}>{invoiceData.invoiceNumber}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ color: '#666', fontWeight: '500' }}>Date:</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div>
+              <span style={{ fontWeight: '600', color: '#666' }}>Invoice Date: </span>
               <span style={{ color: '#333' }}>{formatDate(invoiceData.date)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ color: '#666', fontWeight: '500' }}>Due Date:</span>
-              <span style={{ color: '#333' }}>{formatDate(invoiceData.dueDate)}</span>
+            <div>
+              <span style={{ fontWeight: '600', color: '#666' }}>Invoice Number: </span>
+              <span style={{ color: '#333' }}>{invoiceData.invoiceNumber}</span>
             </div>
-            {invoiceData.customFields?.dateOfHearing && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ color: '#666', fontWeight: '500' }}>Hearing Date:</span>
-                <span style={{ color: '#333' }}>{formatDate(invoiceData.customFields.dateOfHearing)}</span>
-              </div>
-            )}
-            {invoiceData.customFields?.county && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ color: '#666', fontWeight: '500' }}>County:</span>
-                <span style={{ color: '#333' }}>{invoiceData.customFields.county}</span>
-              </div>
-            )}
-            {invoiceData.customFields?.caseName && (
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#666', fontWeight: '500' }}>Case Name:</span>
-                <span style={{ color: '#333' }}>{invoiceData.customFields.caseName}</span>
-              </div>
-            )}
-          </div>
         </div>
+        {invoiceData.customFields?.causeNumber && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div>
+                  <span style={{ fontWeight: '600', color: '#666' }}>Cause Number: </span>
+                  <span style={{ color: '#333' }}>{invoiceData.customFields.causeNumber}</span>
+                </div>
+            </div>
+        )}
       </div>
 
-      {/* Line Items Table */}
+      {/* Simplified - No separate Invoice Details section */}
+
+      {/* Line Items Table - Matching Image Layout */}
       <div className="no-break" style={{ marginBottom: dense ? '20px' : '30px' }}>
         <table style={{ 
           width: '100%', 
@@ -249,18 +167,19 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
           <thead>
             <tr style={{ 
               backgroundColor: '#f9fafb',
-              pageBreakInside: 'avoid' // Keep header together
+              pageBreakInside: 'avoid'
             }}>
               <th style={{ 
                 border: '1px solid #e5e7eb', 
-                padding: thPad, // Responsive padding
+                padding: thPad,
                 textAlign: 'left', 
                 fontWeight: '600', 
                 color: '#333',
                 fontSize: '13px',
-                verticalAlign: 'middle'
+                verticalAlign: 'middle',
+                width: '50%'
               }}>
-                Number
+                Transcript
               </th>
               <th style={{ 
                 border: '1px solid #e5e7eb', 
@@ -269,20 +188,22 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                 fontWeight: '600', 
                 color: '#333',
                 fontSize: '13px',
-                verticalAlign: 'middle'
+                verticalAlign: 'middle',
+                width: '20%'
               }}>
-                Description
+                Volume/Pages
               </th>
               <th style={{ 
                 border: '1px solid #e5e7eb', 
                 padding: thPad,
-                textAlign: 'center', 
+                textAlign: 'left', 
                 fontWeight: '600', 
                 color: '#333',
                 fontSize: '13px',
-                verticalAlign: 'middle'
+                verticalAlign: 'middle',
+                width: '15%'
               }}>
-                Quantity
+                Date
               </th>
               <th style={{ 
                 border: '1px solid #e5e7eb', 
@@ -291,20 +212,10 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                 fontWeight: '600', 
                 color: '#333',
                 fontSize: '13px',
-                verticalAlign: 'middle'
+                verticalAlign: 'middle',
+                width: '15%'
               }}>
-                Rate
-              </th>
-              <th style={{ 
-                border: '1px solid #e5e7eb', 
-                padding: thPad,
-                textAlign: 'right', 
-                fontWeight: '600', 
-                color: '#333',
-                fontSize: '13px',
-                verticalAlign: 'middle'
-              }}>
-                Total
+                Amount
               </th>
             </tr>
           </thead>
@@ -314,18 +225,9 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                 <td style={{ 
                   border: '1px solid #e5e7eb', 
                   padding: tdPad,
-                  textAlign: 'center',
                   fontSize: '13px',
-                  verticalAlign: 'middle'
-                }}>
-                  {item.number}
-                </td>
-                <td style={{ 
-                  border: '1px solid #e5e7eb', 
-                  padding: tdPad,
-                  fontSize: '13px',
-                  verticalAlign: 'middle',
-                  whiteSpace: 'normal',
+                  verticalAlign: 'top',
+                  whiteSpace: 'pre-line',
                   wordBreak: 'break-word',
                   lineHeight: dense ? 1.35 : 1.45
                 }}>
@@ -334,20 +236,18 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                 <td style={{ 
                   border: '1px solid #e5e7eb', 
                   padding: tdPad,
-                  textAlign: 'center',
                   fontSize: '13px',
-                  verticalAlign: 'middle'
+                  verticalAlign: 'top'
                 }}>
-                  {item.quantity}
+                  {item.notes || ''}
                 </td>
                 <td style={{ 
                   border: '1px solid #e5e7eb', 
                   padding: tdPad,
-                  textAlign: 'right',
                   fontSize: '13px',
-                  verticalAlign: 'middle'
+                  verticalAlign: 'top'
                 }}>
-                  {formatCurrency(item.rate)}
+                  {invoiceData.customFields?.dateOfHearing ? formatDate(invoiceData.customFields.dateOfHearing) : ''}
                 </td>
                 <td style={{ 
                   border: '1px solid #e5e7eb', 
@@ -355,7 +255,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                   textAlign: 'right', 
                   fontWeight: '600',
                   fontSize: '13px',
-                  verticalAlign: 'middle'
+                  verticalAlign: 'top'
                 }}>
                   {formatCurrency(item.total)}
                 </td>
@@ -365,11 +265,11 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
           <tfoot>
             <tr style={{ 
               backgroundColor: '#f9fafb',
-              pageBreakInside: 'avoid', // Keep total row together
+              pageBreakInside: 'avoid',
               breakInside: 'avoid'
             }}>
               <td 
-                colSpan={4} 
+                colSpan={3} 
                 style={{ 
                   border: '1px solid #e5e7eb', 
                   padding: thPad,
@@ -378,7 +278,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                   fontSize: '15px'
                 }}
               >
-                Grand Total:
+                Total:
               </td>
               <td style={{ 
                 border: '1px solid #e5e7eb', 
@@ -386,7 +286,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                 textAlign: 'right', 
                 fontWeight: 'bold', 
                 fontSize: '15px', 
-                color: '#7c3aed'
+                color: '#000'
               }}>
                 {formatCurrency(grandTotal)}
               </td>
@@ -424,23 +324,9 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
               <VenmoQRCode hideCaption sizePx={128} />
             </div>
             <div style={{ flexGrow: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, lineHeight: 1 }}>
-                <div style={{ 
-                  width: 22, 
-                  height: 22, 
-                  backgroundColor: '#22c55e', 
-                  borderRadius: '50%', 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  flex: '0 0 22px'
-                }}>
-                  <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>$</span>
-                </div>
-                <div style={{ lineHeight: 1.2 }}>
-                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#333' }}>Venmo</p>
-                  <p style={{ margin: 0, fontSize: 12.5, color: '#666' }}>@ValerieDeLeon-CSR</p>
-                </div>
+              <div style={{ marginBottom: 6, lineHeight: 1.2 }}>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#333' }}>Venmo</p>
+                <p style={{ margin: 0, fontSize: 12.5, color: '#666' }}>@ValerieDeLeon-CSR</p>
               </div>
               <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
                 Scan QR code or search for @ValerieDeLeon-CSR
@@ -449,72 +335,69 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
           </div>
 
           {/* Mail Check */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ 
-              width: 22, 
-              height: 22, 
-              backgroundColor: '#3b82f6', 
-              borderRadius: '50%', 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              flex: '0 0 22px'
-            }}>
-              <span style={{ color: 'white', fontSize: 11, lineHeight: 1 }}>✉</span>
-            </div>
-            <div>
-              <p style={{ margin: '0 0 4px 0', fontWeight: 600, fontSize: 14, color: '#333', lineHeight: 1 }}>
-                Mail Check To:
-              </p>
-              <div style={{ color: '#666', lineHeight: dense ? 1.35 : 1.5, fontSize: 12.5 }}>
-                <p style={{ margin: 0 }}>Valerie De Leon, CSR</p>
-                <p style={{ margin: 0 }}>126 Old Settlers Drive</p>
-                <p style={{ margin: 0 }}>San Marcos, TX 78666</p>
-              </div>
+          <div>
+            <p style={{ margin: '0 0 4px 0', fontWeight: 600, fontSize: 14, color: '#333', lineHeight: 1 }}>
+              Mail Check To:
+            </p>
+            <div style={{ color: '#666', lineHeight: dense ? 1.35 : 1.5, fontSize: 12.5 }}>
+              <p style={{ margin: 0 }}>Valerie De Leon, CSR</p>
+              <p style={{ margin: 0 }}>126 Old Settlers Drive</p>
+              <p style={{ margin: 0 }}>San Marcos, TX 78666</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Signature only (smaller) */}
+      {/* Signatures */}
       <div className="no-break" style={{ 
-        display: 'block',
+        display: 'flex',
+        flexDirection: compact ? 'column' : 'row',
+        justifyContent: 'flex-start',
+        alignItems: compact ? 'flex-start' : 'flex-end',
+        gap: compact ? 16 : 40,
         marginTop: dense ? '20px' : '32px',
         marginBottom: dense ? '16px' : '24px',
         pageBreakInside: 'avoid'
       }}>
-        <p style={{ color: '#666', fontWeight: 500, margin: '0 0 6px 0', fontSize: 14 }}>
-          Court Reporter Signature:
-        </p>
-        <div style={{ transform: 'scale(0.75)', transformOrigin: 'left top', display: 'inline-block', marginBottom: dense ? 8 : 10 }}>
-          <SignatureImage />
+        <div>
+          <p style={{ color: '#666', fontWeight: 500, margin: '0 0 6px 0', fontSize: 14 }}>
+            Court Reporter Signature:
+          </p>
+          <div style={{ transform: 'scale(0.75)', transformOrigin: 'left top', display: 'inline-block', marginBottom: dense ? 8 : 10 }}>
+            <SignatureImage showDetails={false} />
+          </div>
+          <div style={{ borderTop: '1px solid #9ca3af', width: '260px', marginBottom: 4 }} />
+          <p style={{ margin: 0, color: '#6b7280', fontSize: 12 }}>
+            Valerie De Leon, CSR #13025
+          </p>
         </div>
-        <p style={{ margin: 0, color: '#6b7280', fontSize: 12 }}>
-          Valerie De Leon, CSR #13025
-        </p>
+
+        {includeJudgeSignature && (
+          <div style={{ marginTop: compact ? 8 : 0 }}>
+            <div style={{ height: 80 }}></div> {/* Spacer to align bottom line with signature */}
+            <div style={{ borderTop: '1px solid #9ca3af', width: '260px', marginBottom: 4 }} />
+            <p style={{ color: '#6b7280', fontSize: 12, margin: 0 }}>
+              {invoiceData.customFields?.judgeName ? (
+                <span dangerouslySetInnerHTML={{ 
+                  __html: invoiceData.customFields.judgeName.replace(/22nd/g, '22<sup>nd</sup>') 
+                }} />
+              ) : (
+                "Judge's Signature"
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Thank You Message */}
+      {/* Footer - Blank per requirements */}
       <div style={{ 
         textAlign: 'center',
         paddingTop: '16px',
         borderTop: '1px solid #e5e7eb',
-        marginTop: 'auto'
+        marginTop: 'auto',
+        minHeight: '40px'
       }}>
-        <p style={{ 
-          color: '#666', 
-          fontWeight: '500',
-          margin: '0 0 4px 0'
-        }}>
-          Thank you for your business!
-        </p>
-        <p style={{ 
-          color: '#6b7280', 
-          fontSize: '12px',
-          margin: '0'
-        }}>
-          Payment is due within 30 days of invoice date.
-        </p>
+        {/* Footer left blank per customer requirements */}
       </div>
     </div>
   );

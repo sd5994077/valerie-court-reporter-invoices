@@ -38,108 +38,61 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
         }
       `}</style>
 
-      {/* Header */}
-      <div className="no-break" style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'end', gap: 16, marginBottom: 10 }}>
-        <div>
-          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: 0.5, color: '#6d28d9' }}>INVOICE</div>
-          <div style={{ marginTop: 4, color: '#6b7280', fontSize: 12.5 }}>
-            <span style={{ marginRight: 14 }}>#{invoiceData.invoiceNumber}</span>
-            <span>DATE: {formatDate(invoiceData.date)}</span>
-          </div>
-        </div>
+      {/* Header - Centered Court Reporter Information */}
+      <div className="no-break" style={{ textAlign: 'center', marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 18 }}>Valerie DeLeon, CSR</div>
+        <div style={{ color: '#4b5563', fontSize: 12 }}>126 Old Settlers Drive</div>
+        <div style={{ color: '#4b5563', fontSize: 12 }}>San Marcos, Texas 78666</div>
+        <div style={{ color: '#4b5563', fontSize: 12 }}>512-878-3327</div>
+        <div style={{ color: '#4b5563', fontSize: 12 }}>valeriedeleon.csr@gmail.com</div>
+      </div>
 
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>Valerie De Leon, CSR</div>
-          <div style={{ color: '#4b5563', fontSize: 12.5 }}>126 Old Settlers Drive, San Marcos, TX 78666</div>
-          <div style={{ color: '#4b5563', fontSize: 12.5 }}>valeriedeleon.csr@gmail.com</div>
+      <div style={{ height: 2, background: '#6d28d9', opacity: 0.85, margin: '8px 0 12px' }} />
+
+      {/* Invoice Date and Number - Same Line */}
+      <div className="no-break" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #e5e7eb' }}>
+        <div>
+          <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Invoice Date: </span>
+          <span style={{ fontSize: 12 }}>{formatDate(invoiceData.date)}</span>
+        </div>
+        <div>
+          <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Invoice Number: </span>
+          <span style={{ fontSize: 12 }}>{invoiceData.invoiceNumber}</span>
         </div>
       </div>
 
-      <div style={{ height: 2, background: '#6d28d9', opacity: 0.85, margin: '8px 0 14px' }} />
+      {/* Simplified - No separate Invoice Details section */}
 
-      {/* Bill To + Invoice Details */}
-      <div className="no-break" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 12 }}>
-        <div>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>BILL TO:</div>
-          {invoiceData.manualClient?.company && (
-            <div style={{ fontWeight: 700, fontSize: 14 }}>{invoiceData.manualClient.company}</div>
-          )}
-          <div style={{ fontWeight: 700, fontSize: 14 }}>{invoiceData.manualClient?.name}</div>
-          <div style={{ color: '#374151', fontSize: 12.5, whiteSpace: 'pre-line' }}>{invoiceData.manualClient?.address}</div>
-          {invoiceData.manualClient?.email && (
-            <div style={{ color: '#374151', fontSize: 12.5 }}>{invoiceData.manualClient.email}</div>
-          )}
-          {invoiceData.manualClient?.phone && (
-            <div style={{ color: '#374151', fontSize: 12.5 }}>{invoiceData.manualClient.phone}</div>
-          )}
-        </div>
-
-        <div>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Invoice Details:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', rowGap: 4 }}>
-            <div style={{ color: '#6b7280' }}>Invoice Number:</div>
-            <div style={{ color: '#111827' }}>{invoiceData.invoiceNumber}</div>
-            <div style={{ color: '#6b7280' }}>Date:</div>
-            <div style={{ color: '#111827' }}>{formatDate(invoiceData.date)}</div>
-            {invoiceData.dueDate && (
-              <>
-                <div style={{ color: '#6b7280' }}>Due Date:</div>
-                <div style={{ color: '#111827' }}>{formatDate(invoiceData.dueDate)}</div>
-              </>
-            )}
-            {invoiceData.customFields?.dateOfHearing && (
-              <>
-                <div style={{ color: '#6b7280' }}>Hearing Date:</div>
-                <div style={{ color: '#111827' }}>{formatDate(invoiceData.customFields.dateOfHearing)}</div>
-              </>
-            )}
-            {invoiceData.customFields?.county && (
-              <>
-                <div style={{ color: '#6b7280' }}>County:</div>
-                <div style={{ color: '#111827' }}>{invoiceData.customFields.county}</div>
-              </>
-            )}
-            {invoiceData.customFields?.caseName && (
-              <>
-                <div style={{ color: '#6b7280' }}>Case Name:</div>
-                <div style={{ color: '#111827' }}>{invoiceData.customFields.caseName}</div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Items table */}
+      {/* Items table - Matching Image Layout */}
       <div className="no-break" style={{ marginBottom: 12 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: '60%' }} />
-            <col style={{ width: '10%' }} />
+            <col style={{ width: '50%' }} />
+            <col style={{ width: '20%' }} />
             <col style={{ width: '15%' }} />
             <col style={{ width: '15%' }} />
           </colgroup>
           <thead>
             <tr style={{ background: '#f9fafb', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb' }}>
-              {['ITEM', 'QTY', 'PRICE', 'TOTAL'].map(h => (
-                <th key={h} style={{ textAlign: h === 'ITEM' ? 'left' : 'right', padding: cellPad, fontSize: 12, letterSpacing: 0.4, color: '#6b7280', fontWeight: 700, verticalAlign: 'middle', height: rowHeight }}>{h}</th>
+              {['TRANSCRIPT', 'VOLUME/PAGES', 'DATE', 'AMOUNT'].map(h => (
+                <th key={h} style={{ textAlign: h === 'TRANSCRIPT' ? 'left' : h === 'AMOUNT' ? 'right' : 'left', padding: cellPad, fontSize: 11, letterSpacing: 0.4, color: '#6b7280', fontWeight: 700, verticalAlign: 'middle', height: rowHeight }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {items.map((it, i) => (
               <tr key={i} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: cellPad, verticalAlign: 'middle', height: rowHeight, textAlign: 'left', wordBreak: 'break-word' }}>{it.description}</td>
-                <td style={{ padding: cellPad, verticalAlign: 'middle', height: rowHeight, textAlign: 'right' }}>{it.quantity}</td>
-                <td style={{ padding: cellPad, verticalAlign: 'middle', height: rowHeight, textAlign: 'right' }}>{money(it.rate)}</td>
-                <td style={{ padding: cellPad, verticalAlign: 'middle', height: rowHeight, textAlign: 'right', fontWeight: 700 }}>{money(it.total)}</td>
+                <td style={{ padding: cellPad, verticalAlign: 'top', textAlign: 'left', wordBreak: 'break-word', whiteSpace: 'pre-line', fontSize: 11.5 }}>{it.description}</td>
+                <td style={{ padding: cellPad, verticalAlign: 'top', fontSize: 11.5 }}>{invoiceData.lineItems[i]?.notes || ''}</td>
+                <td style={{ padding: cellPad, verticalAlign: 'top', fontSize: 11.5 }}>{invoiceData.customFields?.dateOfHearing ? formatDate(invoiceData.customFields.dateOfHearing) : ''}</td>
+                <td style={{ padding: cellPad, verticalAlign: 'top', textAlign: 'right', fontWeight: 700, fontSize: 11.5 }}>{money(it.total)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={2} />
-              <td style={{ padding: cellPad, textAlign: 'right', fontWeight: 700, borderTop: '1px solid #e5e7eb' }}>TOTAL</td>
-              <td style={{ padding: cellPad, textAlign: 'right', fontWeight: 800, borderTop: '1px solid #e5e7eb', color: '#6d28d9' }}>{money(subtotal)}</td>
+              <td colSpan={3} style={{ padding: cellPad, textAlign: 'right', fontWeight: 700, borderTop: '1px solid #e5e7eb', fontSize: 12 }}>Total:</td>
+              <td style={{ padding: cellPad, textAlign: 'right', fontWeight: 800, borderTop: '1px solid #e5e7eb', color: '#000', fontSize: 12 }}>{money(subtotal)}</td>
             </tr>
           </tfoot>
         </table>

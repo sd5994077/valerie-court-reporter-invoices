@@ -38,32 +38,71 @@ export default function Dashboard() {
   const branding = getBranding();
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [recentInvoices, setRecentInvoices] = useState([]);
+  const [allInvoices, setAllInvoices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState<string>('All');
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
 
   useEffect(() => {
-    // Load dashboard data
-    loadDashboardData();
+    // Load raw data from localStorage
+    loadRawData();
   }, []);
 
-  const loadDashboardData = () => {
+  // Recalculate stats when invoices or selected year changes
+  useEffect(() => {
+    if (allInvoices.length > 0) {
+      calculateStats(allInvoices);
+    } else {
+      setIsLoading(false);
+    }
+  }, [allInvoices, selectedYear]);
+
+  const loadRawData = () => {
     setIsLoading(true);
-    
     try {
-      // Get finalized invoices from localStorage
       const finalizedInvoices = localStorage.getItem('finalizedInvoices');
       const invoices = finalizedInvoices ? JSON.parse(finalizedInvoices) : [];
       
-      // Ensure all invoices have a status (default to 'pending' if not set)
+      // Ensure all invoices have a status
       const invoicesWithStatus = invoices.map((invoice: any) => ({
         ...invoice,
         status: invoice.status || 'pending'
       }));
-      
-      // Update localStorage with invoices that have status
+
+      // Update localStorage if needed
       if (invoicesWithStatus.length > 0) {
         localStorage.setItem('finalizedInvoices', JSON.stringify(invoicesWithStatus));
       }
-      
+
+      // Extract available years
+      const years = new Set<string>();
+      invoicesWithStatus.forEach((inv: any) => {
+        if (inv.date) {
+          const year = new Date(inv.date).getFullYear().toString();
+          years.add(year);
+        }
+      });
+      // Sort years descending
+      setAvailableYears(Array.from(years).sort().reverse());
+
+      setAllInvoices(invoicesWithStatus);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      setIsLoading(false);
+    }
+  };
+
+  const calculateStats = (invoices: any[]) => {
+    setIsLoading(true);
+    try {
+      // Filter by selected year
+      const filteredInvoices = selectedYear === 'All' 
+        ? invoices 
+        : invoices.filter((inv: any) => {
+            if (!inv.date) return false;
+            return new Date(inv.date).getFullYear().toString() === selectedYear;
+          });
+
       // Count invoices by status
       const invoiceCounts = {
         pending: 0,
@@ -72,7 +111,7 @@ export default function Dashboard() {
         closed: 0
       };
       
-      invoicesWithStatus.forEach((invoice: any) => {
+      filteredInvoices.forEach((invoice: any) => {
         const status = invoice.status as keyof typeof invoiceCounts;
         if (status in invoiceCounts) {
           invoiceCounts[status]++;
@@ -80,7 +119,7 @@ export default function Dashboard() {
       });
       
       // Calculate revenue ONLY from completed and closed invoices
-      const revenueInvoices = invoicesWithStatus.filter((invoice: any) => 
+      const revenueInvoices = filteredInvoices.filter((invoice: any) => 
         invoice.status === 'completed' || invoice.status === 'closed'
       );
       
@@ -91,7 +130,7 @@ export default function Dashboard() {
         return sum + invoiceTotal;
       }, 0);
       
-      const invoiceCount = invoicesWithStatus.length;
+      const invoiceCount = filteredInvoices.length;
       const averageInvoice = revenueInvoices.length > 0 ? totalRevenue / revenueInvoices.length : 0;
       
       // Group by county (only for revenue-generating invoices)
@@ -116,36 +155,36 @@ export default function Dashboard() {
         invoiceCount,
         invoiceCounts,
         averageInvoice,
-        changePercentage: -100, // Placeholder - would calculate from previous period
-        averageChangePercentage: -100, // Placeholder - would calculate from previous period
+        changePercentage: -100,
+        averageChangePercentage: -100,
         countyRevenue: countyRevenueArray
       });
       
-      // Sort invoices by date (newest first), then by status priority (Overdue, Pending, Complete, Closed)
-      const sortedInvoices = invoicesWithStatus.sort((a: any, b: any) => {
-        // Primary sort: Date (newest first)
+      // Sort invoices by date (newest first), then by status priority
+      const sortedInvoices = [...filteredInvoices].sort((a: any, b: any) => {
         const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
-        
-        // Secondary sort: Status priority (Overdue, Pending, Complete, Closed)
         const statusOrder = { 'overdue': 1, 'pending': 2, 'completed': 3, 'closed': 4 };
         const statusA = statusOrder[a.status as keyof typeof statusOrder] || 5;
         const statusB = statusOrder[b.status as keyof typeof statusOrder] || 5;
         
-        // If dates are the same (or very close), sort by status
-        if (Math.abs(dateComparison) < 86400000) { // Less than 1 day difference
+        if (Math.abs(dateComparison) < 86400000) {
           return statusA - statusB;
         }
-        
         return dateComparison;
       });
       
-      setRecentInvoices(sortedInvoices.slice(0, 10)); // First 10 invoices (newest with proper priority)
+      setRecentInvoices(sortedInvoices);
       
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('Error calculating stats:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadDashboardData = () => {
+    // Wrapper for compatibility if passed as prop, or just reuse loadRawData
+    loadRawData();
   };
 
   const refreshData = () => {
@@ -159,9 +198,23 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Dashboard Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Revenue Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600">Track your court reporting business performance</p>
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Revenue Dashboard</h1>
+            <p className="text-sm sm:text-base text-gray-600">Track your court reporting business performance</p>
+          </div>
+          <div className="mt-4 sm:mt-0">
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="block w-full sm:w-auto pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md shadow-sm"
+            >
+              <option value="All">All Time</option>
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -267,18 +320,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Dashboard Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
-          {/* Revenue by County */}
-          <div className="xl:col-span-1">
+        {/* Dashboard Content Grid - Recent Invoices in its own column */}
+        <div className="grid grid-cols-1 gap-6 sm:gap-8">
+          {/* Revenue by County - Full Width */}
+          <div>
             <RevenueByCounty
               countyRevenue={dashboardStats?.countyRevenue || []}
               isLoading={isLoading}
             />
           </div>
 
-          {/* Recent Invoices */}
-          <div className="xl:col-span-2">
+          {/* Recent Invoices - Full Width in its own row */}
+          <div>
             <RecentInvoices
               invoices={recentInvoices}
               isLoading={isLoading}

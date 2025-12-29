@@ -41,11 +41,11 @@ interface FinalizedInvoice extends InvoiceFormData {
 const generatePDF = async (invoiceData: InvoiceFormData) => {
   try {
     const html2pdf = (await import('html2pdf.js')).default;
-    // Always render the compact one-pager PDF off-screen
+    // Render the full Court Reporter Invoice layout off-screen for PDF
     let tempContainer: HTMLDivElement | null = null;
     const React = (await import('react')).default;
     const ReactDOM = (await import('react-dom/client')).default;
-    const { InvoicePDFOnePager } = await import('./InvoicePDFOnePager');
+    const { InvoicePDF } = await import('./InvoicePDF');
 
     tempContainer = document.createElement('div');
     tempContainer.style.position = 'absolute';
@@ -55,15 +55,34 @@ const generatePDF = async (invoiceData: InvoiceFormData) => {
 
     const root = ReactDOM.createRoot(tempContainer);
     await new Promise<void>((resolve) => {
-      root.render(React.createElement(InvoicePDFOnePager, { invoiceData }));
+      root.render(React.createElement(InvoicePDF, { invoiceData }));
       setTimeout(resolve, 100);
     });
     const pdfElement = tempContainer.querySelector('#invoice-pdf-content') as HTMLElement | null;
     if (!pdfElement) throw new Error('Failed to render PDF content');
 
+    const today = new Date();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const yyyy = String(today.getFullYear());
+    const todayStamp = `${mm}${dd}${yyyy}`;
+
+    const invoiceNumber = invoiceData.invoiceNumber || '';
+    const invoiceSuffix = invoiceNumber.includes('-')
+      ? invoiceNumber.split('-').pop()
+      : invoiceNumber;
+
+    const rawCounty = (invoiceData.customFields && invoiceData.customFields.county) || '';
+    const countyCore = rawCounty.replace(/County$/i, '').trim();
+    const countyToken = (countyCore || rawCounty || 'Invoice')
+      .replace(/\s+/g, '')
+      .replace(/[^A-Za-z0-9]/g, '');
+
+    const safeFileName = `${invoiceSuffix || 'invoice'}-${countyToken}-${todayStamp}.pdf`;
+
     const opt = {
       margin: [0.25, 0.4, 0.4, 0.4],
-      filename: `${invoiceData.invoiceNumber}.pdf`,
+      filename: safeFileName,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
         scale: 2,
@@ -109,6 +128,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
   }));
   
   const grandTotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
+  const includeJudgeSignature = !!invoiceData.customFields?.includeJudgeSignature;
 
   const handleFinalize = async () => {
     setIsProcessing(true);
@@ -293,60 +313,52 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                 </div>
               </div>
 
-              {/* Bill To & Invoice Details */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
-                {/* Bill To */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Bill To:</h3>
-                  <div className="text-gray-600 space-y-1">
-                    {invoiceData.manualClient?.company && (
-                      <p className="font-medium">{invoiceData.manualClient.company}</p>
-                    )}
-                    <p className="font-medium">{invoiceData.manualClient?.name?.replace(/\s+/g, ' ').trim()}</p>
-                    {invoiceData.manualClient?.address && (
-                      <p className="whitespace-pre-line">{invoiceData.manualClient.address}</p>
-                    )}
-                    {invoiceData.manualClient?.email && (
-                      <p className="break-all">{invoiceData.manualClient.email}</p>
-                    )}
-                    {invoiceData.manualClient?.phone && (
-                      <p>{invoiceData.manualClient.phone}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Invoice Details */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Invoice Details:</h3>
-                  <div className="space-y-2">
+              {/* Invoice Details Left Aligned, No Bill To */}
+              <div className="mb-6 sm:mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Invoice Details:</h3>
+                <div className="space-y-2 max-w-md">
+                  {invoiceData.customFields?.causeNumber && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600 font-medium">Invoice Number:</span>
-                      <span className="text-gray-800 text-right">{invoiceData.invoiceNumber}</span>
+                      <span className="text-gray-600 font-medium">Cause Number:</span>
+                      <span className="text-gray-800 text-right font-medium">{invoiceData.customFields.causeNumber}</span>
                     </div>
+                  )}
+                  {invoiceData.customFields?.caseName && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600 font-medium">Date:</span>
-                      <span className="text-gray-800 text-right">{formatDate(invoiceData.date)}</span>
+                      <span className="text-gray-600 font-medium">Case Name:</span>
+                      <span className="text-gray-800 text-right break-words">{invoiceData.customFields.caseName}</span>
                     </div>
-                    {/* Due Date removed per requirement */}
-                    {invoiceData.customFields?.dateOfHearing && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">Hearing Date:</span>
-                        <span className="text-gray-800 text-right">{formatDate(invoiceData.customFields.dateOfHearing)}</span>
-                      </div>
-                    )}
-                    {invoiceData.customFields?.county && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">County:</span>
-                        <span className="text-gray-800 text-right">{invoiceData.customFields.county}</span>
-                      </div>
-                    )}
-                    {invoiceData.customFields?.caseName && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">Case Name:</span>
-                        <span className="text-gray-800 text-right break-words">{invoiceData.customFields.caseName}</span>
-                      </div>
-                    )}
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 font-medium">Invoice Number:</span>
+                    <span className="text-gray-800 text-right">{invoiceData.invoiceNumber}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 font-medium">Date:</span>
+                    <span className="text-gray-800 text-right">{formatDate(invoiceData.date)}</span>
+                  </div>
+                  {invoiceData.customFields?.dateOfHearing && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-medium">Hearing Date:</span>
+                      <span className="text-gray-800 text-right">{formatDate(invoiceData.customFields.dateOfHearing)}</span>
+                    </div>
+                  )}
+                  {invoiceData.customFields?.county && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-medium">County:</span>
+                      <span className="text-gray-800 text-right">{invoiceData.customFields.county}</span>
+                    </div>
+                  )}
+                  {invoiceData.customFields?.serviceType && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-bold">Service Type:</span>
+                      <span className="text-gray-800 text-right font-bold">
+                        {invoiceData.customFields.serviceType === 'Other' 
+                          ? invoiceData.customFields.serviceTypeOther || 'Other'
+                          : invoiceData.customFields.serviceType}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -367,11 +379,11 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                     <tbody>
                       {lineItemsWithTotals.map((item, index) => (
                         <tr key={index} className="hover:bg-gray-50">
-                          <td className="border border-gray-200 px-4 py-3 text-center">{item.number}</td>
-                          <td className="border border-gray-200 px-4 py-3">{item.description}</td>
-                          <td className="border border-gray-200 px-4 py-3 text-center">{item.quantity}</td>
-                          <td className="border border-gray-200 px-4 py-3 text-right">{formatCurrency(item.rate)}</td>
-                          <td className="border border-gray-200 px-4 py-3 text-right font-semibold">{formatCurrency(item.total)}</td>
+                          <td className="border border-gray-200 px-4 py-3 text-center text-gray-800">{item.number}</td>
+                          <td className="border border-gray-200 px-4 py-3 text-gray-800 whitespace-pre-line">{item.description}</td>
+                          <td className="border border-gray-200 px-4 py-3 text-center text-gray-800">{item.quantity}</td>
+                          <td className="border border-gray-200 px-4 py-3 text-right text-gray-800">{formatCurrency(item.rate)}</td>
+                          <td className="border border-gray-200 px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(item.total)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -463,11 +475,22 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
               </div>
 
               {/* Signature */}
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end space-y-4 sm:space-y-0">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-6 sm:space-y-0 sm:space-x-8 mt-4">
                 <div className="text-center sm:text-left">
                   <p className="text-gray-600 font-medium mb-2">Court Reporter Signature:</p>
                   <SignatureImage />
                 </div>
+
+                {includeJudgeSignature && (
+                  <div className="text-center sm:text-left sm:self-end">
+                    <div className="border-t border-gray-400 w-64 mx-auto sm:mx-0 mb-1" />
+                    <p className="text-gray-500 text-sm">
+                      {invoiceData.customFields?.judgeName 
+                        ? invoiceData.customFields.judgeName 
+                        : "Judge's Signature"}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Thank You Message */}

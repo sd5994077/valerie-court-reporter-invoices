@@ -22,17 +22,19 @@ interface InvoiceFormProps {
 }
 
 export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps) {
-  // Client Information
-  const [clientName, setClientName] = useState('');
-  const [company, setCompany] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
+  // Client Information - COMMENTED OUT (no longer needed per requirements)
+  // const [clientName, setClientName] = useState('');
+  // const [company, setCompany] = useState('');
+  // const [phone, setPhone] = useState('');
+  // const [email, setEmail] = useState('');
+  // const [address, setAddress] = useState('');
 
   // Invoice Details
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [county, setCounty] = useState('');
+  const [causeNumber, setCauseNumber] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [caseName, setCaseName] = useState('');
 
   // Toast notification state
   const [showToast, setShowToast] = useState(false);
@@ -41,6 +43,38 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
 
   // Add state for field validation timing
   const [validationTrigger, setValidationTrigger] = useState<{[key: string]: boolean}>({});
+
+  // Judges State
+  const [judges, setJudges] = useState<string[]>(['Judge R. Bruce Boyer']);
+  const [selectedJudge, setSelectedJudge] = useState('Judge R. Bruce Boyer');
+  const [customJudge, setCustomJudge] = useState('');
+
+  // Load judges from local storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedJudges = localStorage.getItem('savedJudges');
+      if (savedJudges) {
+        setJudges(JSON.parse(savedJudges));
+      }
+    }
+  }, []);
+
+  const handleCustomJudgeBlur = () => {
+    if (customJudge.trim()) {
+      // Check if already in list
+      if (!judges.includes(customJudge.trim())) {
+        if (window.confirm(`Do you want to add "${customJudge}" to the saved list of Judges?`)) {
+          const newJudges = [...judges, customJudge.trim()];
+          setJudges(newJudges);
+          localStorage.setItem('savedJudges', JSON.stringify(newJudges));
+          setSelectedJudge(customJudge.trim());
+          setCustomJudge(''); // Clear custom input as it's now selected from dropdown (or we can keep it as is, but logic suggests we switch to dropdown)
+          // Actually, if we add it to dropdown, we should select it in dropdown.
+        }
+      }
+    }
+  };
+
 
   // Generate invoice number on client side only
   useEffect(() => {
@@ -66,12 +100,21 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
 
   // Line Items
   const [lineItems, setLineItems] = useState([
-    { number: 1, description: '', quantity: 1, total: 0 }
+    { number: 1, description: '', quantity: 1, volumePages: '', total: 0 }
   ]);
 
-  // Case Information
-  const [caseName, setCaseName] = useState('');
+  // Case Information - Simplified
   const [dateOfHearing, setDateOfHearing] = useState('');
+  const [includeJudgeSignature, setIncludeJudgeSignature] = useState(false);
+  // judgeName logic is now handled by selectedJudge/customJudge but we keep this for consistency with previous code if needed, 
+  // but we will use selectedJudge primarily.
+  
+  // Service Type
+  const [serviceType, setServiceType] = useState('');
+  const [serviceTypeOther, setServiceTypeOther] = useState('');
+  
+  // Judge confirmation modal - REMOVED/REPLACED by new dropdown logic
+  // const [showJudgeModal, setShowJudgeModal] = useState(false);
 
   const counties = [
     'Caldwell County',
@@ -80,22 +123,10 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
     'Other'
   ];
 
-  // Phone number formatting
-  const formatPhoneNumber = (value: string) => {
-    const phoneNumber = value.replace(/[^\d]/g, '');
-    const phoneNumberLength = phoneNumber.length;
-    
-    if (phoneNumberLength < 4) return phoneNumber;
-    if (phoneNumberLength < 7) {
-      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
-    }
-    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
-  };
+  // Phone number formatting - REMOVED (no longer needed without client info)
+  // const formatPhoneNumber = (value: string) => { ... };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
-    setPhone(formatted);
-  };
+  // const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => { ... };
 
   // Email validation
   const isValidEmail = (email: string) => {
@@ -107,6 +138,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       number: lineItems.length + 1,
       description: '',
       quantity: 1,
+      volumePages: '',
       total: 0
     }]);
   };
@@ -146,7 +178,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
     const nonEmptyItems = lineItems.filter(item => !isLineItemEmpty(item));
     if (nonEmptyItems.length === 0) {
       // Keep at least one line item
-      setLineItems([{ number: 1, description: '', quantity: 1, total: 0 }]);
+      setLineItems([{ number: 1, description: '', quantity: 1, volumePages: '', total: 0 }]);
     } else {
       const reNumberedItems = nonEmptyItems.map((item, index) => ({
         ...item,
@@ -177,14 +209,24 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   const validateForm = () => {
     const errors: string[] = [];
     
-    // Check client name
-    if (!clientName.trim()) {
-      errors.push('Client Name is required');
+    // Check cause number (replaces client name requirement)
+    if (!causeNumber.trim()) {
+      errors.push('Cause Number is required');
+    }
+
+    // Check Case (new field)
+    if (!caseName.trim()) {
+        errors.push('Case Name is required');
     }
     
     // Check county
     if (!county) {
       errors.push('County is required');
+    }
+    
+    // Check service type
+    if (!serviceType) {
+      errors.push('Service Type is required');
     }
     
     // Filter out empty line items for validation
@@ -221,7 +263,27 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
     }
   };
 
-  const grandTotal = roundToTwoDecimals(lineItems.reduce((sum, item) => sum + (item.total || 0), 0));
+  const grandTotal = roundToTwoDecimals(
+    lineItems.reduce((sum, item) => {
+      const qty = item.quantity || 0;
+      const rate = item.total || 0;
+      return sum + qty * rate;
+    }, 0)
+  );
+
+  const populateFirstLineItem = () => {
+    // "Judge R. Bruce Boyer\nCauseNo. CR2024-562A\nState of Texas vs. Shad Modesett"
+    const judge = selectedJudge === 'Other' ? customJudge : selectedJudge;
+    const description = `${judge}\nCauseNo. ${causeNumber}\n${caseName}`;
+    
+    const updated = [...lineItems];
+    updated[0] = {
+        ...updated[0],
+        description: description
+    };
+    setLineItems(updated);
+    showToastMessage('Line item description populated', 'success');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,30 +298,40 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       return;
     }
     
+    const finalJudgeName = selectedJudge === 'Other' ? customJudge : selectedJudge;
+
     const formData: InvoiceFormData = {
       date,
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       invoiceNumber,
+      // manualClient kept for backward compatibility but not used in new invoices
       manualClient: {
-        name: clientName,
-        company: company || undefined,
-        phone: phone || undefined,
-        email: email || undefined,
-        address
+        name: causeNumber, // Store cause number in name field for backward compatibility
+        company: undefined,
+        phone: undefined,
+        email: undefined,
+        address: ''
       },
       // Only include non-empty line items in the final invoice
       lineItems: nonEmptyItems.map(item => ({
         number: item.number,
         description: item.description,
         quantity: item.quantity,
-        rate: item.total / item.quantity || 0,
+        // Treat the entered value as the per‑unit rate
+        rate: item.total || 0,
         category: 'Court Reporting',
-        taxable: true
+        taxable: true,
+        notes: item.volumePages || undefined // Store volume/pages in notes field
       })),
       customFields: {
         county,
+        causeNumber,
         caseName,
-        dateOfHearing
+        dateOfHearing,
+        includeJudgeSignature,
+        judgeName: finalJudgeName,
+        serviceType: serviceType as 'Appeals' | 'Transcripts' | 'Other' | undefined,
+        serviceTypeOther: serviceType === 'Other' ? serviceTypeOther : undefined
       }
     };
 
@@ -269,14 +341,8 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   // Pre-populate form with draft data when editing
   useEffect(() => {
     if (draftData) {
-      // Populate client information
-      if (draftData.manualClient) {
-        setClientName(draftData.manualClient.name || '');
-        setCompany(draftData.manualClient.company || '');
-        setPhone(draftData.manualClient.phone || '');
-        setEmail(draftData.manualClient.email || '');
-        setAddress(draftData.manualClient.address || '');
-      }
+      // Client information no longer used - commented out
+      // ...
 
       // Populate invoice details
       setDate(draftData.date || new Date().toISOString().split('T')[0]);
@@ -285,8 +351,31 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       // Populate custom fields
       if (draftData.customFields) {
         setCounty(draftData.customFields.county || '');
-        setCaseName(draftData.customFields.caseName || '');
+        setCauseNumber(draftData.customFields.causeNumber || '');
+        setCaseName(draftData.customFields.caseName || ''); // Populate Case Name
         setDateOfHearing(draftData.customFields.dateOfHearing || '');
+        setIncludeJudgeSignature(!!draftData.customFields.includeJudgeSignature);
+        
+        // Handle Judge Name
+        const draftJudge = draftData.customFields.judgeName;
+        if (draftJudge) {
+            if (judges.includes(draftJudge)) {
+                setSelectedJudge(draftJudge);
+            } else {
+                // If judge is not in list (e.g. was custom), maybe add to list or just set as Other + Custom?
+                // For now, let's just add it to list implicitly or set as custom
+                // Simple approach: set as Other and fill custom
+                // Better approach: Check if it matches default, if not, it's 'Other' or we add it?
+                // Let's add it to the list if it's not there to simplify
+                if (!judges.includes(draftJudge)) {
+                    setJudges(prev => [...prev, draftJudge]);
+                    setSelectedJudge(draftJudge);
+                }
+            }
+        }
+        
+        setServiceType(draftData.customFields.serviceType || '');
+        setServiceTypeOther(draftData.customFields.serviceTypeOther || '');
       }
 
       // Populate line items - convert from FormData format back to form format
@@ -295,14 +384,16 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
           number: item.number || index + 1,
           description: item.description || '',
           quantity: item.quantity || 1,
-          total: (item.quantity || 1) * (item.rate || 0)
+          volumePages: item.notes || '',
+          // Use the stored per‑unit rate when reloading into the form
+          total: item.rate || 0
         }));
         setLineItems(formLineItems);
       }
 
       console.log('Form pre-populated with draft data');
     }
-  }, [draftData]);
+  }, [draftData, judges]); // Added judges dependency to ensure we can check against loaded judges
 
   // Handle field blur for validation timing
   const handleFieldBlur = (fieldKey: string) => {
@@ -331,127 +422,8 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Client Information Section */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="bg-purple-600 px-6 py-4">
-            <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span>Client Information</span>
-            </h2>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Client Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Client Full Name"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
-                      shouldShowValidation('clientName') && !clientName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
-                    value={clientName}
-                    onChange={(e) => {
-                      // Remove any line breaks and normalize whitespace
-                      const cleanValue = e.target.value.replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ');
-                      setClientName(cleanValue);
-                    }}
-                    onPaste={(e) => {
-                      // Handle paste events to clean up any copied text with line breaks
-                      e.preventDefault();
-                      const paste = e.clipboardData.getData('text');
-                      const cleanPaste = paste.replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
-                      setClientName(cleanPaste);
-                    }}
-                    required
-                    onBlur={() => handleFieldBlur('clientName')}
-                  />
-                  {shouldShowValidation('clientName') && !clientName.trim() && (
-                    <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-2 py-1 rounded shadow-sm z-10">
-                      Client Name is required
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Company
-                </label>
-                <input
-                  type="text"
-                  placeholder="Company Name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  onBlur={() => handleFieldBlur('company')}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <span>Phone Number</span>
-                </label>
-                <input
-                  type="tel"
-                  placeholder="(123) 456-7890"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  value={phone}
-                  onChange={handlePhoneChange}
-                  maxLength={14}
-                  onBlur={() => handleFieldBlur('phone')}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  <span>Email Address</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    placeholder="client@example.com"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
-                      shouldShowValidation('email') && email && !isValidEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onBlur={() => handleFieldBlur('email')}
-                  />
-                  {shouldShowValidation('email') && email && !isValidEmail(email) && (
-                    <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-2 py-1 rounded shadow-sm z-10">
-                      Please enter a valid email address
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>Address</span>
-                </label>
-                <textarea
-                  placeholder="123 Main St, City, State ZIP"
-                  rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  onBlur={() => handleFieldBlur('address')}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Client Information Section - REMOVED per requirements */}
+        {/* Client info no longer needed - using Cause Number instead */}
 
         {/* Invoice Details Section */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -464,7 +436,97 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
             </h2>
           </div>
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* Judge Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Judge <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      value={selectedJudge}
+                      onChange={(e) => {
+                          setSelectedJudge(e.target.value);
+                          if (e.target.value !== 'Other') {
+                              setCustomJudge('');
+                          }
+                      }}
+                    >
+                      {judges.map((judge, idx) => (
+                        <option key={idx} value={judge}>{judge}</option>
+                      ))}
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  {selectedJudge === 'Other' && (
+                    <div className="mt-3">
+                        <input 
+                            type="text"
+                            placeholder="Enter Judge Name"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            value={customJudge}
+                            onChange={(e) => setCustomJudge(e.target.value)}
+                            onBlur={handleCustomJudgeBlur}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Enter name. You will be asked to save it to the list.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Case Textbox */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Case <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="e.g. State of Texas vs. ..."
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
+                        shouldShowValidation('caseName') && !caseName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      value={caseName}
+                      onChange={(e) => setCaseName(e.target.value)}
+                      onBlur={() => handleFieldBlur('caseName')}
+                      required
+                    />
+                    {shouldShowValidation('caseName') && !caseName.trim() && (
+                        <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-2 py-1 rounded shadow-sm z-10">
+                          Case is required
+                        </p>
+                    )}
+                  </div>
+                </div>
+            </div>
+
+            {/* Cause Number - New Required Field */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Cause Number <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="e.g., CR2094-542A"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
+                    shouldShowValidation('causeNumber') && !causeNumber.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                  value={causeNumber}
+                  onChange={(e) => setCauseNumber(e.target.value)}
+                  onBlur={() => handleFieldBlur('causeNumber')}
+                  required
+                />
+                {shouldShowValidation('causeNumber') && !causeNumber.trim() && (
+                  <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-2 py-1 rounded shadow-sm z-10">
+                    Cause Number is required
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Date <span className="text-red-500">*</span>
@@ -513,6 +575,9 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                   )}
                 </div>
               </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Invoice Number
@@ -525,19 +590,71 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                 />
                 <p className="text-sm text-purple-600 mt-1 italic">Auto-generated</p>
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Service Type <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
+                      shouldShowValidation('serviceType') && !serviceType ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
+                    value={serviceType}
+                    onChange={(e) => {
+                      setServiceType(e.target.value);
+                      if (e.target.value !== 'Other') {
+                        setServiceTypeOther('');
+                      }
+                    }}
+                    onBlur={() => handleFieldBlur('serviceType')}
+                    required
+                  >
+                    <option value="">Select a service type</option>
+                    <option value="Appeals">Appeals</option>
+                    <option value="Transcripts">Transcripts</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {shouldShowValidation('serviceType') && !serviceType && (
+                    <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-2 py-1 rounded shadow-sm z-10">
+                      Service Type is required
+                    </p>
+                  )}
+                </div>
+                
+                {serviceType === 'Other' && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      placeholder="Please specify service type"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      value={serviceTypeOther}
+                      onChange={(e) => setServiceTypeOther(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Line Items Section */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="bg-purple-600 px-6 py-4">
+          <div className="bg-purple-600 px-6 py-4 flex justify-between items-center">
             <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               <span>Line Items</span>
             </h2>
+            <button
+                type="button"
+                onClick={populateFirstLineItem}
+                className="text-sm bg-white text-purple-600 px-3 py-1 rounded hover:bg-purple-50 transition-colors"
+                title="Populate Line Item 1 with Case Info"
+            >
+                Auto-fill Description
+            </button>
           </div>
           <div className="p-6">
             <div className="overflow-x-auto">
@@ -551,8 +668,10 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                         <span className="text-red-500">*</span>
                       </div>
                     </th>
+                    <th className="px-4 py-3 text-left font-medium">VOLUME/PAGES</th>
                     <th className="px-4 py-3 text-left font-medium">QUANTITY</th>
-                    <th className="px-4 py-3 text-left font-medium">TOTAL</th>
+                    <th className="px-4 py-3 text-left font-medium">AMOUNT</th>
+                    <th className="px-4 py-3 text-left font-medium">LINE TOTAL</th>
                     <th className="px-4 py-3 text-left font-medium">ACTIONS</th>
                   </tr>
                 </thead>
@@ -566,10 +685,10 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                       </td>
                       <td className="px-4 py-4">
                         <div className="relative">
-                          <input
-                            type="text"
-                            placeholder="Enter description"
-                            className={`w-full px-3 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm ${
+                          <textarea
+                            placeholder="Enter description (e.g., Judge name, Cause No., Case details)"
+                            rows={3}
+                            className={`w-full px-3 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm resize-none ${
                               shouldShowValidation(`description_${index}`) && isDescriptionRequired(item) && !item.description.trim() 
                                 ? 'border-red-300 bg-red-50' 
                                 : 'border-gray-300'
@@ -583,24 +702,17 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                               Description required for billed items
                             </p>
                           )}
-                          {isLineItemEmpty(item) && lineItems.length > 1 && (
-                            <div className="mt-1 flex items-center justify-between text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded shadow-sm w-full">
-                              <span className="flex items-center space-x-1">
-                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                </svg>
-                                <span>Empty</span>
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveEmptyItem(index)}
-                                className="text-red-500 hover:text-red-700 underline"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          )}
                         </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <input
+                          type="text"
+                          placeholder="e.g., 1 Volume 48 pages"
+                          className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                          value={item.volumePages || ''}
+                          onChange={(e) => updateLineItem(index, 'volumePages', e.target.value)}
+                          onBlur={() => handleFieldBlur(`volumePages_${index}`)}
+                        />
                       </td>
                       <td className="px-4 py-4">
                         <div className="relative">
@@ -620,26 +732,31 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-purple-600 font-semibold">$</span>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
                             placeholder="0.00"
-                            className="w-32 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                            className="w-32 pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
                             value={item.total || ''}
                             onChange={(e) => updateLineItem(index, 'total', parseFloat(e.target.value) || 0)}
                             onBlur={(e) => handleMoneyBlur(index, parseFloat(e.target.value) || 0)}
                           />
                         </div>
                       </td>
+                      <td className="px-4 py-4 align-middle pl-4">
+                        <span className="font-semibold text-gray-800">
+                          {formatCurrency((item.quantity || 0) * (item.total || 0))}
+                        </span>
+                      </td>
                       <td className="px-4 py-4">
-                        {lineItems.length > 1 && !isLineItemEmpty(lineItems[index]) && (
+                        {lineItems.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeLineItem(index)}
-                            className="group relative text-red-500 hover:text-white hover:bg-red-500 p-2 rounded-lg transition-all duration-200 border border-red-200 hover:border-red-500"
+                            className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded-lg transition-all duration-200 border border-red-200 hover:border-red-500"
                             title="Delete line item"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -678,45 +795,57 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
         </div>
 
         {/* Case Information Section */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="bg-purple-600 px-6 py-4">
-            <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16l-3-9m3 9l3-9" />
-              </svg>
-              <span>Case Information</span>
-            </h2>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Case Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter case name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  value={caseName}
-                  onChange={(e) => setCaseName(e.target.value)}
-                  onBlur={() => handleFieldBlur('caseName')}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date of Hearing
-                </label>
-                <input
-                  type="date"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  value={dateOfHearing}
-                  onChange={(e) => setDateOfHearing(e.target.value)}
-                  onBlur={() => handleFieldBlur('dateOfHearing')}
-                />
-              </div>
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-purple-600 px-6 py-4">
+          <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16l-3-9m3 9l3-9" />
+            </svg>
+            <span>Case Information</span>
+          </h2>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date of Hearing (Optional)
+              </label>
+              <input
+                type="date"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                value={dateOfHearing}
+                onChange={(e) => setDateOfHearing(e.target.value)}
+                onBlur={() => handleFieldBlur('dateOfHearing')}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Will appear in the Date column on invoice
+              </p>
             </div>
           </div>
+
+          <div className="mt-6">
+            <label className="inline-flex items-center space-x-3">
+              <input
+                type="checkbox"
+                className="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                checked={includeJudgeSignature}
+                onChange={(e) => {
+                  const isChecked = e.target.checked;
+                  setIncludeJudgeSignature(isChecked);
+                }}
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Include Judge Signature section on invoice and PDF
+              </span>
+            </label>
+            <p className="mt-1 text-xs text-gray-500">
+              When checked, an extra signature line for the Judge ({selectedJudge === 'Other' ? (customJudge || 'Custom Judge') : selectedJudge}) will appear below the payment section.
+            </p>
+          </div>
         </div>
+      </div>
+      
+      {/* Judge Name Confirmation Modal - REMOVED */}
 
         {/* Submit Button */}
         <div className="flex justify-end">

@@ -26,7 +26,19 @@ export interface InvoiceFormData {
     phone?: string;
   };
   lineItems: Omit<LineItem, 'id' | 'total'>[];
-  customFields?: Record<string, any>;
+  customFields?: {
+    county?: string;
+    causeNumber?: string; // New field - replaces client identification
+    description?: string; // Multi-line description field (Judge, Cause No., etc)
+    caseName?: string; // Kept for backward compatibility
+    dateOfHearing?: string;
+    comments?: string; // Optional comments shown on invoice
+    includeJudgeSignature?: boolean;
+    judgeName?: string | null; // null = generic "Judge's Signature", string = specific judge name
+    serviceType?: 'Appeals' | 'Transcripts' | 'Other';
+    serviceTypeOther?: string; // only used when serviceType is 'Other'
+    [key: string]: any; // allow additional custom fields
+  };
   notes?: string;
   internalNotes?: string;
 }

@@ -43,8 +43,12 @@ interface Invoice {
   };
   customFields?: {
     county?: string;
+    causeNumber?: string;
     caseName?: string;
+    description?: string;
+    comments?: string;
     dateOfHearing?: string;
+    serviceType?: string;
   };
   pdfGenerated?: boolean;
 }
@@ -187,7 +191,10 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
           email: invoiceData.manualClient?.email,
           phone: invoiceData.manualClient?.phone
         },
-        customFields: invoiceData.customFields
+        customFields: {
+          ...invoiceData.customFields,
+          serviceType: invoiceData.customFields?.serviceType as 'Appeals' | 'Transcripts' | 'Other' | undefined
+        }
       };
       
       // Create a temporary container
@@ -356,8 +363,8 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-md hover:shadow-2xl transition-shadow overflow-hidden">
-        <div className="bg-purple-700 text-white px-4 sm:px-6 py-4">
+      <div className="bg-white rounded-lg shadow-md hover:shadow-2xl transition-shadow">
+        <div className="bg-purple-700 text-white px-4 sm:px-6 py-4 rounded-t-lg">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -428,7 +435,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                         </div>
                         <p className="text-sm text-gray-600">{formatDate(invoice.date)}</p>
                         <p className="text-sm text-gray-900 font-medium">
-                          {invoice.manualClient?.company || invoice.manualClient?.name || 'Unknown Client'}
+                          {invoice.customFields?.causeNumber || invoice.manualClient?.name || 'No Cause Number'}
                         </p>
                       </div>
                       <div className="text-right">
@@ -476,9 +483,10 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                             </svg>
                           </button>
 
-                          {openDropdown === invoice.id && (
-                            <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                              <div className="py-1">
+
+                              {openDropdown === invoice.id && (
+                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                                  <div className="py-1">
                                 <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
                                   Invoice Actions
                                 </div>
@@ -560,7 +568,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
               </div>
 
               {/* Desktop Table View (hidden on small screens) */}
-              <div className="hidden sm:block overflow-x-auto">
+              <div className="hidden sm:block overflow-visible">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
@@ -584,7 +592,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                           {getSortIcon('date')}
                         </div>
                       </th>
-                      <th className="text-left py-3 px-2 font-medium text-purple-800 text-sm">CLIENT</th>
+                      <th className="text-left py-3 px-2 font-medium text-purple-800 text-sm">CAUSE NUMBER</th>
                       <th 
                         className="text-left py-3 px-2 font-medium text-purple-800 text-sm cursor-pointer hover:bg-purple-50 transition-colors duration-200 rounded"
                         onClick={() => handleSort('county')}
@@ -630,7 +638,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                         </td>
                         <td className="py-3 px-2">
                           <span className="text-gray-900">
-                            {invoice.manualClient?.company || invoice.manualClient?.name || 'Unknown Client'}
+                            {invoice.customFields?.causeNumber || invoice.manualClient?.name || 'No Cause Number'}
                           </span>
                         </td>
                         <td className="py-3 px-2">
@@ -665,10 +673,13 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                               )}
                             </button>
 
-                            {/* Actions Dropdown */}
+                          {/* Actions Dropdown */}
                             <div className="relative">
                               <button
-                                onClick={() => setOpenDropdown(openDropdown === invoice.id ? null : invoice.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenDropdown(openDropdown === invoice.id ? null : invoice.id);
+                                }}
                                 className="text-gray-600 hover:text-gray-700 hover:bg-gray-100 p-1 rounded transition-colors duration-200"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -679,7 +690,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                               </button>
 
                               {openDropdown === invoice.id && (
-                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
                                   <div className="py-1">
                                     <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
                                       Invoice Actions
