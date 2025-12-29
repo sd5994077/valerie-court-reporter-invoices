@@ -196,6 +196,30 @@ npm install -g vercel
 vercel
 ```
 
+#### Vercel Environment Variables (Optional but Recommended):
+For staging/production environment detection:
+
+1. Go to your Vercel project dashboard
+2. Navigate to **Settings → Environment Variables**
+3. Add the following variables:
+   - **Preview deployments:** `NEXT_PUBLIC_ENV` = `staging`
+   - **Production:** `NEXT_PUBLIC_ENV` = `production`
+
+Then in your code, you can use environment-specific behavior:
+```typescript
+// Example: Show different UI or enable test features in staging
+if (process.env.NEXT_PUBLIC_ENV === "staging") {
+  // test-only UI, banners, logging, fake data, etc
+  console.log("Running in staging mode");
+  // Show staging banner, enable debug logs, etc.
+}
+
+// Example: Different API endpoints
+const apiUrl = process.env.NEXT_PUBLIC_ENV === "staging" 
+  ? "https://staging-api.example.com"
+  : "https://api.example.com";
+```
+
 ### Netlify:
 ```bash
 npm run build
