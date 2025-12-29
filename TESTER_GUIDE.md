@@ -128,9 +128,10 @@ Optional:
 Go to **Appeals** and test:
 - create a new appeal
 - confirm it appears in the correct column
-- drag/drop between columns (except Archived, if restricted)
-- open/edit an appeal and:
-  - add an extension (try multiple, up to 3)
+  - drag/drop between columns (desktop) or **use the dropdown menu on the card** to move it (mobile)
+  - open/edit an appeal and:
+    - confirm the modal scrolls if content is long (especially on mobile)
+    - add an extension (try multiple, up to 3)
   - change extension requested date
   - remove an extension
 - confirm the effective deadline / days left indicators behave as expected
