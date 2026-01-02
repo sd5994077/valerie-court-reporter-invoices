@@ -175,3 +175,33 @@
   - Dashboard display of cause numbers
   - Backward compatibility with existing invoices
 
+### 2025-12-29 — iOS PDF Download Issue: Infinite Spinning on Download
+
+- Issue: PDF downloads work on Android/Desktop but fail on iOS devices - download button spins indefinitely without completing
+- Impact: iOS users cannot download invoices, blocking core functionality
+- Root cause: 
+  - iOS Safari blocks direct blob downloads via `.save()` method due to security restrictions
+  - The `html2pdf.js` library's `.save()` method triggers a download that gets stuck in pending state on iOS
+  - Android Chrome and desktop browsers handle blob downloads differently and work fine
+- Affected files:
+  - `src/components/InvoiceReview.tsx` - Finalize invoice PDF download
+  - `src/components/RecentInvoices.tsx` - Dashboard PDF downloads
+  - `pages/view-invoice.tsx` - View invoice PDF download
+- Fix implemented:
+  - **Hybrid approach with iOS detection**: Automatically detects iOS devices using user agent
+  - **iOS devices**: PDF opens in new Safari tab (user can save via Share button)
+  - **Android/Desktop**: Direct download via `.save()` method (original behavior)
+  - **User feedback**: Different toast messages for iOS ("📱 PDF opened in new tab! Tap share to save") vs download ("✅ PDF downloaded successfully!")
+  - **Memory management**: Proper blob URL cleanup with `URL.revokeObjectURL()` after 1 second delay
+  - **Error handling**: Popup blocker detection with clear error messages
+- Technical details:
+  - iOS detection: `/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream`
+  - iOS method: `html2pdf().output('blob')` → `URL.createObjectURL()` → `window.open(url, '_blank')`
+  - Other platforms: `html2pdf().set(opt).from(pdfElement).save()` (unchanged)
+- Verification:
+  - ✓ No TypeScript compilation errors
+  - ✓ No linter errors
+  - ✓ Code follows best practices for cross-platform PDF handling
+  - ✓ Memory leaks prevented with proper blob URL cleanup
+  - ✓ User experience optimized for each platform
+

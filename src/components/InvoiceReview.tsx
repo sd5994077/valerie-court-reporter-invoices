@@ -37,7 +37,7 @@ interface FinalizedInvoice extends InvoiceFormData {
   pdfGenerated: boolean;
 }
 
-// PDF generation function
+// PDF generation function with iOS compatibility
 const generatePDF = async (invoiceData: InvoiceFormData) => {
   try {
     const html2pdf = (await import('html2pdf.js')).default;
@@ -97,14 +97,41 @@ const generatePDF = async (invoiceData: InvoiceFormData) => {
       }
     };
 
-    await html2pdf().set(opt).from(pdfElement).save();
-
-    // Clean up temporary container if we created one
-    if (tempContainer && tempContainer.parentNode) {
-      tempContainer.parentNode.removeChild(tempContainer);
-    }
+    // Detect iOS devices (Safari restrictions on blob downloads)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     
-    return true;
+    if (isIOS) {
+      // iOS: Open PDF in new tab (Safari allows viewing/saving from there)
+      const pdfBlob = await html2pdf().set(opt).from(pdfElement).output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      // Clean up temp container before opening new window
+      if (tempContainer && tempContainer.parentNode) {
+        tempContainer.parentNode.removeChild(tempContainer);
+      }
+      
+      // Open in new tab
+      const newWindow = window.open(pdfUrl, '_blank');
+      
+      // Clean up blob URL after a delay (give browser time to load)
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
+      
+      if (!newWindow) {
+        throw new Error('Popup blocked. Please allow popups for this site.');
+      }
+      
+      return { success: true, method: 'ios-view' };
+    } else {
+      // Android/Desktop: Direct download
+      await html2pdf().set(opt).from(pdfElement).save();
+      
+      // Clean up temporary container
+      if (tempContainer && tempContainer.parentNode) {
+        tempContainer.parentNode.removeChild(tempContainer);
+      }
+      
+      return { success: true, method: 'download' };
+    }
   } catch (error) {
     console.error('PDF generation failed:', error);
     throw error;
@@ -173,7 +200,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
     setPdfGenerating(true);
     
     try {
-      await generatePDF(invoiceData);
+      const result = await generatePDF(invoiceData);
       
       // Update the saved invoice to mark PDF as generated
       if (finalizedInvoice) {
@@ -188,12 +215,18 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
         setFinalizedInvoice(updatedInvoice);
       }
       
-      setToastMessage('PDF downloaded successfully!');
+      // Provide appropriate feedback based on method used
+      if (result.method === 'ios-view') {
+        setToastMessage('📱 PDF opened in new tab! Tap the share button to save or print.');
+      } else {
+        setToastMessage('✅ PDF downloaded successfully!');
+      }
       setShowToast(true);
       
     } catch (error) {
       console.error('PDF generation failed:', error);
-      setToastMessage('Failed to generate PDF. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF';
+      setToastMessage(`❌ ${errorMessage}. Please try again.`);
       setShowToast(true);
     } finally {
       setPdfGenerating(false);

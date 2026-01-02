@@ -237,14 +237,41 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         }
       };
 
-      await html2pdf().set(opt).from(pdfElement).save();
+      // Detect iOS devices (Safari restrictions on blob downloads)
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       
-      // Clean up temporary container
-      if (tempContainer && tempContainer.parentNode) {
-        tempContainer.parentNode.removeChild(tempContainer);
+      if (isIOS) {
+        // iOS: Open PDF in new tab (Safari allows viewing/saving from there)
+        const pdfBlob = await html2pdf().set(opt).from(pdfElement).output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        
+        // Clean up temp container before opening new window
+        if (tempContainer && tempContainer.parentNode) {
+          tempContainer.parentNode.removeChild(tempContainer);
+        }
+        
+        // Open in new tab
+        const newWindow = window.open(pdfUrl, '_blank');
+        
+        // Clean up blob URL after a delay (give browser time to load)
+        setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
+        
+        if (!newWindow) {
+          throw new Error('Popup blocked. Please allow popups for this site.');
+        }
+        
+        return { success: true, method: 'ios-view' };
+      } else {
+        // Android/Desktop: Direct download
+        await html2pdf().set(opt).from(pdfElement).save();
+        
+        // Clean up temporary container
+        if (tempContainer && tempContainer.parentNode) {
+          tempContainer.parentNode.removeChild(tempContainer);
+        }
+        
+        return { success: true, method: 'download' };
       }
-      
-      return true;
     } catch (error) {
       console.error('PDF generation failed:', error);
       throw error;
@@ -255,18 +282,24 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
     setProcessingPdf(invoice.id);
     
     try {
-      await generatePDF(invoice);
+      const result = await generatePDF(invoice);
       
       // Update the invoice to mark PDF as generated
       updateInvoiceStatus(invoice.id, invoice.status, { pdfGenerated: true });
       
-      setToastMessage(`PDF for ${invoice.invoiceNumber} downloaded successfully!`);
+      // Provide appropriate feedback based on method used
+      if (result.method === 'ios-view') {
+        setToastMessage(`📱 PDF for ${invoice.invoiceNumber} opened in new tab! Tap share to save.`);
+      } else {
+        setToastMessage(`✅ PDF for ${invoice.invoiceNumber} downloaded successfully!`);
+      }
       setToastType('success');
       setShowToast(true);
       
     } catch (error) {
       console.error('PDF generation failed:', error);
-      setToastMessage(`Failed to generate PDF for ${invoice.invoiceNumber}. Please try again.`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setToastMessage(`❌ Failed to generate PDF for ${invoice.invoiceNumber}. ${errorMsg}`);
       setToastType('error');
       setShowToast(true);
     } finally {
