@@ -121,6 +121,8 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
     if (isIOS) {
       // iOS Safari: Use blob URL for viewing (fast), let Safari handle saving via Share sheet
       console.log('[iOS PDF] Generating PDF as blob for iOS...');
+      console.log('[iOS PDF] Element to convert:', pdfElement);
+      console.log('[iOS PDF] Options:', opt);
       
       // Add timeout wrapper for PDF generation (prevent infinite hanging)
       const generateWithTimeout = <T,>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
@@ -132,10 +134,12 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
         ]);
       };
 
+      console.log('[iOS PDF] Starting html2pdf blob generation...');
       // Generate blob (much faster than data URI on iOS)
       const pdfBlob = await generateWithTimeout(
         html2pdf().set(opt).from(pdfElement).output('blob')
       ) as Blob;
+      console.log('[iOS PDF] Blob generation completed!');
       
       console.log('[iOS PDF] PDF generated successfully, size:', Math.round(pdfBlob.size / 1024), 'KB');
       
@@ -357,8 +361,13 @@ export default function ViewInvoice() {
       setShowToast(true);
     } catch (error) {
       console.error('PDF generation failed:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
       if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // VERY VISIBLE ERROR for debugging
+      alert(`❌ PDF ERROR:\n\n${errorMessage}\n\nCheck console for details`);
+      
       setToastMessage(`❌ ${errorMessage}. Please try again.`);
       setShowToast(true);
     } finally {
