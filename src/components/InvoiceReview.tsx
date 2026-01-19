@@ -38,7 +38,18 @@ interface FinalizedInvoice extends InvoiceFormData {
 }
 
 // PDF generation function with iOS compatibility
-const generatePDF = async (invoiceData: InvoiceFormData) => {
+const isProbablyIOS = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const platform = (navigator as any).platform || '';
+  const maxTouchPoints = (navigator as any).maxTouchPoints || 0;
+  // iPadOS 13+ often reports as "MacIntel" but has touch points.
+  const iPadOS = platform === 'MacIntel' && maxTouchPoints > 1;
+  const iOSUA = /iPad|iPhone|iPod/.test(ua);
+  return iOSUA || iPadOS;
+};
+
+const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Window | null) => {
   try {
     const html2pdf = (await import('html2pdf.js')).default;
     // Render the full Court Reporter Invoice layout off-screen for PDF
@@ -98,27 +109,32 @@ const generatePDF = async (invoiceData: InvoiceFormData) => {
     };
 
     // Detect iOS devices (Safari restrictions on blob downloads)
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isIOS = isProbablyIOS();
     
     if (isIOS) {
       // iOS: Open PDF in new tab (Safari allows viewing/saving from there)
-      const pdfBlob = await html2pdf().set(opt).from(pdfElement).output('blob');
+      const rawBlob: Blob = await html2pdf().set(opt).from(pdfElement).output('blob');
+      const pdfBlob = rawBlob.type === 'application/pdf' ? rawBlob : new Blob([rawBlob], { type: 'application/pdf' });
       const pdfUrl = URL.createObjectURL(pdfBlob);
       
-      // Clean up temp container before opening new window
-      if (tempContainer && tempContainer.parentNode) {
-        tempContainer.parentNode.removeChild(tempContainer);
+      // Clean up temp container before navigating (reduces memory pressure on iOS)
+      root.unmount();
+      if (tempContainer && tempContainer.parentNode) tempContainer.parentNode.removeChild(tempContainer);
+      
+      // Navigate the pre-opened tab if available; otherwise fall back.
+      const targetWindow = preOpenedWindow && !preOpenedWindow.closed ? preOpenedWindow : null;
+      if (targetWindow) {
+        targetWindow.location.href = pdfUrl;
+      } else {
+        const newWindow = window.open(pdfUrl, '_blank');
+        if (!newWindow) {
+          // Last-resort fallback: navigate current tab
+          window.location.href = pdfUrl;
+        }
       }
       
-      // Open in new tab
-      const newWindow = window.open(pdfUrl, '_blank');
-      
-      // Clean up blob URL after a delay (give browser time to load)
-      setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
-      
-      if (!newWindow) {
-        throw new Error('Popup blocked. Please allow popups for this site.');
-      }
+      // Clean up blob URL after a longer delay (Safari may need time to load it)
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 120000);
       
       return { success: true, method: 'ios-view' };
     } else {
@@ -126,9 +142,8 @@ const generatePDF = async (invoiceData: InvoiceFormData) => {
       await html2pdf().set(opt).from(pdfElement).save();
       
       // Clean up temporary container
-      if (tempContainer && tempContainer.parentNode) {
-        tempContainer.parentNode.removeChild(tempContainer);
-      }
+      root.unmount();
+      if (tempContainer && tempContainer.parentNode) tempContainer.parentNode.removeChild(tempContainer);
       
       return { success: true, method: 'download' };
     }
@@ -198,9 +213,17 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
 
   const handleDownloadPDF = async () => {
     setPdfGenerating(true);
+    let preOpenedWindow: Window | null = null;
     
     try {
-      const result = await generatePDF(invoiceData);
+      // iOS Safari often blocks popups if opened after async work; pre-open a tab synchronously.
+      preOpenedWindow = isProbablyIOS() ? window.open('', '_blank') : null;
+      if (preOpenedWindow && preOpenedWindow.document) {
+        preOpenedWindow.document.title = 'Generating PDF…';
+        preOpenedWindow.document.body.innerHTML = '<p style="font-family: system-ui; padding: 16px;">Generating PDF…</p>';
+      }
+
+      const result = await generatePDF(invoiceData, preOpenedWindow);
       
       // Update the saved invoice to mark PDF as generated
       if (finalizedInvoice) {
@@ -225,6 +248,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
       
     } catch (error) {
       console.error('PDF generation failed:', error);
+      if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF';
       setToastMessage(`❌ ${errorMessage}. Please try again.`);
       setShowToast(true);
