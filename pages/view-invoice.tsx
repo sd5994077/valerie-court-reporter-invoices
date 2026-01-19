@@ -334,6 +334,11 @@ export default function ViewInvoice() {
     let preOpenedWindow: Window | null = null;
     
     try {
+      console.log('=== PDF DOWNLOAD STARTED ===');
+      console.log('Version: v2.1-iOS-Fix-BLOB-METHOD');
+      console.log('Is iOS:', isProbablyIOS());
+      console.log('User Agent:', navigator.userAgent);
+      
       // iOS Safari often blocks popups if opened after async work; pre-open a tab synchronously.
       preOpenedWindow = isProbablyIOS() ? window.open('', '_blank') : null;
       if (preOpenedWindow && preOpenedWindow.document) {
@@ -370,6 +375,11 @@ export default function ViewInvoice() {
   return (
     <>
       <div className="min-h-screen bg-gray-50">
+        {/* DEPLOYMENT VERSION INDICATOR - REMOVE AFTER TESTING */}
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg">
+          🚀 v2.1-iOS-Fix-BLOB-METHOD 🚀
+        </div>
+        
         {/* Header with Action Buttons */}
         <div className="bg-white shadow-sm">
           <div className="max-w-4xl mx-auto px-6 py-4">
