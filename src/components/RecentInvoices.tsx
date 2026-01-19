@@ -252,30 +252,49 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       const isIOS = isProbablyIOS();
       
       if (isIOS) {
-        // iOS: Open PDF in new tab (Safari allows viewing/saving from there)
-        const rawBlob: Blob = await html2pdf().set(opt).from(pdfElement).output('blob');
-        const pdfBlob = rawBlob.type === 'application/pdf' ? rawBlob : new Blob([rawBlob], { type: 'application/pdf' });
-        const pdfUrl = URL.createObjectURL(pdfBlob);
+        // iOS Safari has issues with blob URLs - use data URI instead for better compatibility
+        console.log('[iOS PDF] Generating PDF as data URI for iOS compatibility...');
+        
+        // Get PDF as data URI (works better on iOS than blob URLs)
+        const dataUri = await html2pdf().set(opt).from(pdfElement).output('datauristring');
         
         // Clean up temp container before navigating (reduces memory pressure on iOS)
         root.unmount();
         if (tempContainer && tempContainer.parentNode) tempContainer.parentNode.removeChild(tempContainer);
+
+        console.log('[iOS PDF] Opening PDF in new tab...');
         
         // Navigate the pre-opened tab if available; otherwise fall back.
         const targetWindow = preOpenedWindow && !preOpenedWindow.closed ? preOpenedWindow : null;
         if (targetWindow) {
-          targetWindow.location.href = pdfUrl;
+          // Write the data URI to the pre-opened window
+          targetWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>${invoiceData.invoiceNumber}.pdf</title>
+              <style>
+                body { margin: 0; padding: 0; }
+                iframe { border: 0; width: 100vw; height: 100vh; }
+              </style>
+            </head>
+            <body>
+              <iframe src="${dataUri}" type="application/pdf"></iframe>
+            </body>
+            </html>
+          `);
+          targetWindow.document.close();
         } else {
-          const newWindow = window.open(pdfUrl, '_blank');
+          // Fallback: open data URI directly (Safari will show PDF with save/share options)
+          const newWindow = window.open(dataUri, '_blank');
           if (!newWindow) {
-            // Last-resort fallback: navigate current tab
-            window.location.href = pdfUrl;
+            console.warn('[iOS PDF] Popup blocked, navigating current tab');
+            window.location.href = dataUri;
           }
         }
         
-        // Clean up blob URL after a longer delay (Safari may need time to load it)
-        setTimeout(() => URL.revokeObjectURL(pdfUrl), 120000);
-        
+        console.log('[iOS PDF] PDF opened successfully. Use Safari Share → Save to Files to download.');
         return { success: true, method: 'ios-view' };
       } else {
         // Android/Desktop: Direct download
@@ -312,7 +331,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       
       // Provide appropriate feedback based on method used
       if (result.method === 'ios-view') {
-        setToastMessage(`📱 PDF for ${invoice.invoiceNumber} opened in new tab! Tap share to save.`);
+        setToastMessage(`📱 PDF opened! Tap Safari's Share (↗) → "Save to Files" to download.`);
       } else {
         setToastMessage(`✅ PDF for ${invoice.invoiceNumber} downloaded successfully!`);
       }
