@@ -272,86 +272,157 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       };
       
       if (isIOS) {
-        // iOS Safari has issues with blob URLs - use data URI instead for better compatibility
-        console.log('[iOS PDF] Generating PDF as data URI for iOS compatibility...');
+        // iOS Safari: Use blob URL for viewing (fast), let Safari handle saving via Share sheet
+        console.log('[iOS PDF] Generating PDF as blob for iOS...');
         
         // Add timeout wrapper for PDF generation (prevent infinite hanging)
-        const generateWithTimeout = <T,>(promise: Promise<T>, timeoutMs = 25000): Promise<T> => {
+        const generateWithTimeout = <T,>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
           return Promise.race([
             promise,
             new Promise<T>((_, reject) => 
-              setTimeout(() => reject(new Error('PDF generation timed out after 25 seconds')), timeoutMs)
+              setTimeout(() => reject(new Error('PDF generation timed out after 30 seconds')), timeoutMs)
             )
           ]);
         };
 
-        // Get PDF as data URI with timeout protection
-        const dataUri = await generateWithTimeout(
-          html2pdf().set(opt).from(pdfElement).output('datauristring')
-        ) as string;
+        // Generate blob (much faster than data URI on iOS)
+        const pdfBlob = await generateWithTimeout(
+          html2pdf().set(opt).from(pdfElement).outputPdf('blob')
+        ) as Blob;
         
-        console.log('[iOS PDF] PDF generated successfully, size:', Math.round(dataUri.length / 1024), 'KB');
+        console.log('[iOS PDF] PDF generated successfully, size:', Math.round(pdfBlob.size / 1024), 'KB');
         
         // Clean up temp container before navigating (reduces memory pressure on iOS)
         root.unmount();
         if (tempContainer && tempContainer.parentNode) tempContainer.parentNode.removeChild(tempContainer);
 
+        // Create blob URL
+        const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
+        
         console.log('[iOS PDF] Opening PDF in new tab...');
         
         // Navigate the pre-opened tab if available; otherwise fall back.
         const targetWindow = preOpenedWindow && !preOpenedWindow.closed ? preOpenedWindow : null;
         
         if (targetWindow) {
-          // Use DOM manipulation instead of document.write to avoid data URI injection issues
+          // Create a simple HTML wrapper with embedded PDF and instructions
           targetWindow.document.open();
           targetWindow.document.write(`
             <!DOCTYPE html>
             <html>
             <head>
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <meta charset="utf-8">
               <title>${invoiceData.invoiceNumber}.pdf</title>
               <style>
-                body { margin: 0; padding: 0; font-family: -apple-system, system-ui; }
-                #status { padding: 16px; color: #666; }
-                #pdf { border: 0; width: 100vw; height: 100vh; display: none; }
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+                  background: #f5f5f7;
+                }
+                #toolbar {
+                  position: sticky;
+                  top: 0;
+                  background: rgba(255,255,255,0.95);
+                  backdrop-filter: blur(10px);
+                  border-bottom: 1px solid #e5e5e7;
+                  padding: 12px 16px;
+                  z-index: 100;
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                }
+                #instructions {
+                  flex: 1;
+                  font-size: 14px;
+                  color: #1d1d1f;
+                  line-height: 1.4;
+                }
+                #shareBtn {
+                  background: #007aff;
+                  color: white;
+                  border: none;
+                  border-radius: 8px;
+                  padding: 8px 16px;
+                  font-size: 14px;
+                  font-weight: 500;
+                  cursor: pointer;
+                  white-space: nowrap;
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                }
+                #shareBtn:active {
+                  opacity: 0.7;
+                }
+                #pdfContainer {
+                  width: 100%;
+                  height: calc(100vh - 70px);
+                  position: relative;
+                }
+                #pdf {
+                  width: 100%;
+                  height: 100%;
+                  border: none;
+                }
               </style>
             </head>
             <body>
-              <div id="status">Loading PDF...</div>
-              <iframe id="pdf" type="application/pdf"></iframe>
+              <div id="toolbar">
+                <div id="instructions">
+                  📱 Tap Share button to save
+                </div>
+                <button id="shareBtn">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 1L8 11M8 1L11 4M8 1L5 4M3 11L3 13C3 13.5523 3.44772 14 4 14L12 14C12.5523 14 13 13.5523 13 13V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Share
+                </button>
+              </div>
+              <div id="pdfContainer">
+                <iframe id="pdf" src="${blobUrl}" type="application/pdf"></iframe>
+              </div>
+              <script>
+                // Native share for iOS
+                document.getElementById('shareBtn').onclick = async () => {
+                  try {
+                    const response = await fetch('${blobUrl}');
+                    const blob = await response.blob();
+                    const file = new File([blob], '${invoiceData.invoiceNumber}.pdf', { type: 'application/pdf' });
+                    
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                      await navigator.share({
+                        files: [file],
+                        title: '${invoiceData.invoiceNumber}.pdf',
+                      });
+                    } else {
+                      // Fallback: use Safari's built-in share
+                      alert('Tap the Safari Share button at the top of the screen to save this PDF');
+                    }
+                  } catch (err) {
+                    console.error('Share failed:', err);
+                    alert('Use Safari\\'s Share button (top bar) to save this PDF');
+                  }
+                };
+              </script>
             </body>
             </html>
           `);
           targetWindow.document.close();
-
-          // Wait a moment for DOM to be ready, then inject the PDF
-          setTimeout(() => {
-            if (targetWindow.closed) {
-              console.warn('[iOS PDF] Target window was closed by user');
-              return;
-            }
-            const iframe = targetWindow.document.getElementById('pdf') as HTMLIFrameElement | null;
-            const status = targetWindow.document.getElementById('status');
-            
-            if (iframe) {
-              iframe.src = dataUri;
-              iframe.style.display = 'block';
-              if (status) status.remove();
-              console.log('[iOS PDF] PDF loaded into iframe successfully');
-            } else {
-              console.error('[iOS PDF] Could not find iframe element');
-            }
-          }, 100);
+          console.log('[iOS PDF] PDF embedded successfully with share functionality');
         } else {
-          // Fallback: open data URI directly (Safari will show PDF with save/share options)
-          const newWindow = window.open(dataUri, '_blank');
+          // Fallback: open blob URL directly
+          const newWindow = window.open(blobUrl, '_blank');
           if (!newWindow) {
             console.warn('[iOS PDF] Popup blocked, navigating current tab');
-            window.location.href = dataUri;
+            window.location.href = blobUrl;
           }
         }
         
-        console.log('[iOS PDF] PDF opened successfully. Use Safari Share → Save to Files to download.');
+        // Clean up blob URL after longer delay (Safari needs time to load it)
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 300000); // 5 minutes
+        
+        console.log('[iOS PDF] PDF opened successfully. Use Share button to save.');
         return { success: true, method: 'ios-view' };
       } else {
         // Android/Desktop: Direct download
@@ -388,7 +459,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       
       // Provide appropriate feedback based on method used
       if (result.method === 'ios-view') {
-        setToastMessage(`📱 PDF opened! Tap Safari's Share (↗) → "Save to Files" to download.`);
+        setToastMessage(`📱 PDF opened! Tap the blue Share button or use Safari's share icon (top) to save.`);
       } else {
         setToastMessage(`✅ PDF for ${invoice.invoiceNumber} downloaded successfully!`);
       }
