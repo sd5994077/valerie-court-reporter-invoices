@@ -72,6 +72,26 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
     const pdfElement = tempContainer.querySelector('#invoice-pdf-content') as HTMLElement | null;
     if (!pdfElement) throw new Error('Failed to render PDF content');
 
+    // Wait for images and fonts to load (critical for iOS)
+    const imgs = Array.from(pdfElement.querySelectorAll('img'));
+    await Promise.all(
+      imgs.map(img => 
+        img.complete ? Promise.resolve() : new Promise<void>(resolve => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve(); // Continue even if image fails
+          setTimeout(() => resolve(), 5000); // Timeout after 5s
+        })
+      )
+    );
+
+    // Wait for fonts to be ready
+    if ('fonts' in document && (document as any).fonts?.ready) {
+      await Promise.race([
+        (document as any).fonts.ready,
+        new Promise(resolve => setTimeout(resolve, 3000)) // 3s timeout
+      ]);
+    }
+
     const today = new Date();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
@@ -91,12 +111,15 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
 
     const safeFileName = `${invoiceSuffix || 'invoice'}-${countyToken}-${todayStamp}.pdf`;
 
+    // Detect iOS devices (Safari restrictions on blob downloads)
+    const isIOS = isProbablyIOS();
+
     const opt = {
       margin: [0.25, 0.4, 0.4, 0.4],
       filename: safeFileName,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
-        scale: 2,
+        scale: isIOS ? 1.5 : 2, // Lower scale on iOS for better performance
         useCORS: true,
         letterRendering: true,
         logging: false
@@ -107,16 +130,27 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
         orientation: 'portrait'
       }
     };
-
-    // Detect iOS devices (Safari restrictions on blob downloads)
-    const isIOS = isProbablyIOS();
     
     if (isIOS) {
       // iOS Safari has issues with blob URLs - use data URI instead for better compatibility
       console.log('[iOS PDF] Generating PDF as data URI for iOS compatibility...');
       
-      // Get PDF as data URI (works better on iOS than blob URLs)
-      const dataUri = await html2pdf().set(opt).from(pdfElement).output('datauristring');
+      // Add timeout wrapper for PDF generation (prevent infinite hanging)
+      const generateWithTimeout = <T,>(promise: Promise<T>, timeoutMs = 25000): Promise<T> => {
+        return Promise.race([
+          promise,
+          new Promise<T>((_, reject) => 
+            setTimeout(() => reject(new Error('PDF generation timed out after 25 seconds')), timeoutMs)
+          )
+        ]);
+      };
+
+      // Get PDF as data URI with timeout protection
+      const dataUri = await generateWithTimeout(
+        html2pdf().set(opt).from(pdfElement).output('datauristring')
+      ) as string;
+      
+      console.log('[iOS PDF] PDF generated successfully, size:', Math.round(dataUri.length / 1024), 'KB');
       
       // Clean up temp container before navigating (reduces memory pressure on iOS)
       root.unmount();
@@ -126,8 +160,10 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
       
       // Navigate the pre-opened tab if available; otherwise fall back.
       const targetWindow = preOpenedWindow && !preOpenedWindow.closed ? preOpenedWindow : null;
+      
       if (targetWindow) {
-        // Write the data URI to the pre-opened window
+        // Use DOM manipulation instead of document.write to avoid data URI injection issues
+        targetWindow.document.open();
         targetWindow.document.write(`
           <!DOCTYPE html>
           <html>
@@ -135,16 +171,37 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>${safeFileName}</title>
             <style>
-              body { margin: 0; padding: 0; }
-              iframe { border: 0; width: 100vw; height: 100vh; }
+              body { margin: 0; padding: 0; font-family: -apple-system, system-ui; }
+              #status { padding: 16px; color: #666; }
+              #pdf { border: 0; width: 100vw; height: 100vh; display: none; }
             </style>
           </head>
           <body>
-            <iframe src="${dataUri}" type="application/pdf"></iframe>
+            <div id="status">Loading PDF...</div>
+            <iframe id="pdf" type="application/pdf"></iframe>
           </body>
           </html>
         `);
         targetWindow.document.close();
+
+        // Wait a moment for DOM to be ready, then inject the PDF
+        setTimeout(() => {
+          if (targetWindow.closed) {
+            console.warn('[iOS PDF] Target window was closed by user');
+            return;
+          }
+          const iframe = targetWindow.document.getElementById('pdf') as HTMLIFrameElement | null;
+          const status = targetWindow.document.getElementById('status');
+          
+          if (iframe) {
+            iframe.src = dataUri;
+            iframe.style.display = 'block';
+            if (status) status.remove();
+            console.log('[iOS PDF] PDF loaded into iframe successfully');
+          } else {
+            console.error('[iOS PDF] Could not find iframe element');
+          }
+        }, 100);
       } else {
         // Fallback: open data URI directly (Safari will show PDF with save/share options)
         const newWindow = window.open(dataUri, '_blank');
