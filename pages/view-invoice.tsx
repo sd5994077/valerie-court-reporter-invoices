@@ -134,7 +134,7 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
 
       // Generate blob (much faster than data URI on iOS)
       const pdfBlob = await generateWithTimeout(
-        html2pdf().set(opt).from(pdfElement).outputPdf('blob')
+        html2pdf().set(opt).from(pdfElement).output('blob')
       ) as Blob;
       
       console.log('[iOS PDF] PDF generated successfully, size:', Math.round(pdfBlob.size / 1024), 'KB');
@@ -590,6 +590,11 @@ export default function ViewInvoice() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Version Indicator - Remove after testing */}
+        <div className="text-center py-4">
+          <p className="text-xs text-gray-400">v2.1-ios-fix-blob</p>
         </div>
       </div>
 
