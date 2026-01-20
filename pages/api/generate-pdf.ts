@@ -69,7 +69,7 @@ export default async function handler(
     console.log('[PDF API] Fonts loaded, generating PDF...');
 
     // Generate PDF
-    const pdfBuffer = await page.pdf({
+    const pdfOutput = await page.pdf({
       format: 'Letter',
       printBackground: true,
       margin: {
@@ -82,10 +82,14 @@ export default async function handler(
 
     await browser.close();
 
+    // Puppeteer may return Buffer or Uint8Array depending on version/types.
+    // Normalize to Node.js Buffer for reliable validation + response sending.
+    const pdfBuffer = Buffer.from(pdfOutput as any);
+
     console.log('[PDF API] PDF generated successfully, size:', pdfBuffer.length, 'bytes');
     
     // Verify it's a valid PDF (should start with %PDF)
-    const pdfHeader = pdfBuffer.slice(0, 4).toString();
+    const pdfHeader = pdfBuffer.subarray(0, 4).toString('ascii');
     if (!pdfHeader.startsWith('%PDF')) {
       console.error('[PDF API] Invalid PDF generated, starts with:', pdfHeader);
       throw new Error('Generated file is not a valid PDF');
