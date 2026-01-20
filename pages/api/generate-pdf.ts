@@ -33,9 +33,12 @@ export default async function handler(
     // Launch Chromium with serverless-optimized settings
     const browser = await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      defaultViewport: {
+        width: 1280,
+        height: 720,
+      },
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      headless: true,
     });
 
     console.log('[PDF API] Chromium launched, creating page...');
