@@ -55,6 +55,28 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
       throw new Error('Failed to render PDF content');
     }
     
+    // Convert all images to base64 data URIs for server-side rendering
+    console.log('[PDF] Converting images to base64...');
+    const images = Array.from(pdfElement.querySelectorAll('img'));
+    for (const img of images) {
+      try {
+        if (img.src && !img.src.startsWith('data:')) {
+          // Create a canvas to convert image to base64
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            const dataUrl = canvas.toDataURL('image/png');
+            img.src = dataUrl;
+          }
+        }
+      } catch (err) {
+        console.warn('[PDF] Failed to convert image to base64:', err);
+      }
+    }
+    
     // Create a complete HTML document with all styles
     const invoiceHtml = `
       <!DOCTYPE html>

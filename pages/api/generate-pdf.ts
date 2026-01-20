@@ -47,11 +47,16 @@ export default async function handler(
 
     // Set content with the invoice HTML
     await page.setContent(invoiceHtml, {
-      waitUntil: ['networkidle0', 'load'],
-      timeout: 8000, // 8 second timeout for content loading
+      waitUntil: ['load', 'networkidle0'],
+      timeout: 10000, // 10 second timeout for content loading (including fonts)
     });
 
-    console.log('[PDF API] Page content set, generating PDF...');
+    console.log('[PDF API] Page content set, waiting for fonts...');
+    
+    // Wait a bit for Google Fonts to load
+    await page.evaluate(() => document.fonts.ready);
+    
+    console.log('[PDF API] Fonts loaded, generating PDF...');
 
     // Generate PDF
     const pdfBuffer = await page.pdf({
