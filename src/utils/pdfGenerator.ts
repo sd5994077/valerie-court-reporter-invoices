@@ -63,12 +63,43 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
         if (img.src && !img.src.startsWith('data:')) {
           // Create a canvas to convert image to base64
           const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth || img.width;
-          canvas.height = img.naturalHeight || img.height;
+          
+          // Optimize image size: use 2x display size for print quality, but cap at natural size
+          // to avoid upscaling, and limit max dimension to 1200px (plenty for invoice logos/QRs)
+          const displayWidth = img.width || img.naturalWidth;
+          const displayHeight = img.height || img.naturalHeight;
+          const scaleFactor = 2; // 2x for retina/print sharpness
+          
+          let targetWidth = displayWidth * scaleFactor;
+          let targetHeight = displayHeight * scaleFactor;
+
+          // Don't upscale beyond natural size
+          if (targetWidth > img.naturalWidth) {
+             targetWidth = img.naturalWidth;
+             targetHeight = img.naturalHeight;
+          }
+
+          // Cap max dimension to prevent massive base64 strings
+          const MAX_DIMENSION = 1200;
+          if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
+            const ratio = Math.min(MAX_DIMENSION / targetWidth, MAX_DIMENSION / targetHeight);
+            targetWidth *= ratio;
+            targetHeight *= ratio;
+          }
+
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(img, 0, 0);
-            const dataUrl = canvas.toDataURL('image/png');
+            // Draw with smoothing for resizing
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+            
+            // Use JPEG with 0.8 quality for significant size reduction compared to PNG
+            // while maintaining good print quality
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
             img.src = dataUrl;
           }
         }

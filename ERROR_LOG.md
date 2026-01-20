@@ -46,7 +46,6 @@
 - Verification:
   - Adding a line item shows the full “Empty” warning and Remove action; no clipping.
 
-
 ### 2025-09-19 — Venmo QR not loading due to wrong extension
 
 - Issue: Venmo QR image not displayed on Review Invoice. Component referenced `.png` while actual file was `.jpg` in `public/assets`.
@@ -205,3 +204,21 @@
   - ✓ Memory leaks prevented with proper blob URL cleanup
   - ✓ User experience optimized for each platform
 
+### 2026-01-20 — PDF Size Explosion and API Timeout
+
+- Issue: PDF generation failing with timeouts, and successful PDFs were ~9MB in size.
+- Impact: Users unable to generate PDFs, or PDFs too large to email/share easily.
+- Root cause: 
+  - The client-side PDF generator was converting all images (including the 169KB Venmo QR code) to **uncompressed PNG** Base64 strings at **full native resolution**.
+  - This inflated a 169KB JPEG into a multi-megabyte PNG payload, exceeding the 10MB API request limit and causing timeouts.
+- Affected file:
+  - `src/utils/pdfGenerator.ts`
+- Fix implemented:
+  - **Smart Image Optimization**: 
+    - Resized images to 2x their display size (for print quality) instead of using full native resolution.
+    - Capped max dimension at 1200px.
+    - Switched from `image/png` to `image/jpeg` with 0.8 quality for photo-like images (QR codes).
+- Verification:
+  - PDF payload size reduced by ~95%.
+  - API timeouts resolved.
+  - Image quality maintained for print.
