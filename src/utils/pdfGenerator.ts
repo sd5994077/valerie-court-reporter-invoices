@@ -97,9 +97,9 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
             
-            // Use JPEG with 0.8 quality for significant size reduction compared to PNG
-            // while maintaining good print quality
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            // Use PNG to preserve transparency and avoid corruption issues
+            // Still get size reduction from resizing alone
+            const dataUrl = canvas.toDataURL('image/png');
             img.src = dataUrl;
           }
         }
@@ -135,7 +135,11 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
     console.log('[PDF] Sending to server for generation...');
     
     // Send to API for server-side PDF generation
-    const filename = `${invoiceData.invoiceNumber}.pdf`;
+    // Format: INV-2026-0001-Travis.pdf (include county if available)
+    const county = invoiceData.customFields?.county;
+    const filename = county 
+      ? `${invoiceData.invoiceNumber}-${county}.pdf`
+      : `${invoiceData.invoiceNumber}.pdf`;
     const response = await fetch('/api/generate-pdf', {
       method: 'POST',
       headers: {
