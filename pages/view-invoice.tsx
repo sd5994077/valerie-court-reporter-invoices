@@ -162,6 +162,8 @@ export default function ViewInvoice() {
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     // Load invoice data from localStorage
@@ -199,14 +201,46 @@ export default function ViewInvoice() {
   
   const grandTotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
 
+  const addDebugLog = (msg: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMsg = `[${timestamp}] ${msg}`;
+    setDebugLogs(prev => [...prev, logMsg]);
+    console.log(logMsg);
+  };
+
   const handleDownloadPDF = async () => {
     setPdfGenerating(true);
+    setShowDebug(true);
+    setDebugLogs([]);
     
     try {
-      console.log('=== PDF DOWNLOAD v3.1 ===');
-      console.log('iOS:', isProbablyIOS(), '| UA:', navigator.userAgent.slice(0, 50));
+      addDebugLog('=== PDF DOWNLOAD v3.1 STARTED ===');
+      addDebugLog(`iOS: ${isProbablyIOS()}`);
+      addDebugLog(`UA: ${navigator.userAgent.slice(0, 80)}`);
+      addDebugLog('Importing html2pdf...');
 
+      // Wrap generatePDF to intercept console logs
+      const originalLog = console.log;
+      const originalError = console.error;
+      
+      console.log = (...args) => {
+        addDebugLog(args.join(' '));
+        originalLog(...args);
+      };
+      console.error = (...args) => {
+        addDebugLog('ERROR: ' + args.join(' '));
+        originalError(...args);
+      };
+
+      addDebugLog('Calling generatePDF...');
       const result = await generatePDF(invoiceData);
+      
+      // Restore original console
+      console.log = originalLog;
+      console.error = originalError;
+      
+      addDebugLog('generatePDF completed!');
+      addDebugLog(`Result method: ${result.method}`);
       
       if (result.method === 'ios-share') {
         setToastMessage('✅ PDF saved! Open Files app to view.');
@@ -217,13 +251,18 @@ export default function ViewInvoice() {
       }
       setShowToast(true);
     } catch (error) {
-      console.error('PDF failed:', error);
+      addDebugLog(`FATAL ERROR: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof Error && error.stack) {
+        addDebugLog(`Stack: ${error.stack.slice(0, 200)}`);
+      }
       const msg = error instanceof Error ? error.message : 'Unknown error';
       alert(`PDF Error: ${msg}`);
       setToastMessage(`❌ ${msg}`);
       setShowToast(true);
     } finally {
       setPdfGenerating(false);
+      // Keep debug panel open for 30 seconds after completion
+      setTimeout(() => setShowDebug(false), 30000);
     }
   };
 
@@ -237,8 +276,8 @@ export default function ViewInvoice() {
     <>
       <div className="min-h-screen bg-gray-50">
         {/* DEPLOYMENT VERSION INDICATOR - REMOVE AFTER TESTING */}
-        <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-black py-2 px-4 text-center font-bold text-lg shadow-lg">
-          🚀 v3.1-iOS-NoPreOpen 🚀
+        <div className="bg-gradient-to-r from-pink-500 to-rose-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg">
+          🐛 v3.2-DEBUG-CONSOLE 🐛
         </div>
         
         {/* Header with Action Buttons */}
@@ -475,6 +514,51 @@ export default function ViewInvoice() {
           show={showToast}
           onClose={() => setShowToast(false)}
         />
+      )}
+
+      {/* Debug Console - iOS Logging */}
+      {showDebug && (
+        <div 
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            maxHeight: '40vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            color: '#00ff00',
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            padding: '12px',
+            overflowY: 'auto',
+            zIndex: 9999,
+            borderTop: '2px solid #00ff00',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid #00ff00', paddingBottom: '4px' }}>
+            <span style={{ fontWeight: 'bold', color: '#ffff00' }}>🐛 DEBUG CONSOLE</span>
+            <button 
+              onClick={() => setShowDebug(false)}
+              style={{ background: '#ff0000', color: 'white', border: 'none', borderRadius: '3px', padding: '2px 8px', cursor: 'pointer' }}
+            >
+              ✕ Close
+            </button>
+          </div>
+          <div style={{ lineHeight: '1.4' }}>
+            {debugLogs.length === 0 ? (
+              <div style={{ color: '#888' }}>Waiting for logs...</div>
+            ) : (
+              debugLogs.map((log, i) => (
+                <div key={i} style={{ 
+                  marginBottom: '4px',
+                  color: log.includes('ERROR') ? '#ff5555' : log.includes('FATAL') ? '#ff0000' : '#00ff00'
+                }}>
+                  {log}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       )}
     </>
   );
