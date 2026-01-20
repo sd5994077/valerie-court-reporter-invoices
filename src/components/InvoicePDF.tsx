@@ -1,7 +1,6 @@
 import React from 'react';
 import type { InvoiceFormData } from '../types/invoice';
 import { SignatureImage } from './SignatureImage';
-import { VenmoQRCode } from './VenmoQRCode';
 
 // Currency formatting utility
 const formatCurrency = (amount: number) => {
@@ -320,8 +319,15 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         }}>
           {/* Venmo with QR Code */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-            <div style={{ width: 128, height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
-              <VenmoQRCode hideCaption sizePx={128} />
+            <div style={{ width: 128, height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden', border: '2px solid #e9d5ff', borderRadius: '8px', padding: '4px', backgroundColor: 'white' }}>
+              {/* Use regular img tag instead of Next Image for PDF generation compatibility */}
+              <img 
+                src="/assets/Venmo-Val.jpg" 
+                alt="Venmo QR Code"
+                width={120}
+                height={120}
+                style={{ objectFit: 'cover', borderRadius: '4px' }}
+              />
             </div>
             <div style={{ flexGrow: 1 }}>
               <div style={{ marginBottom: 6, lineHeight: 1.2 }}>

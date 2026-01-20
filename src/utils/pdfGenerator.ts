@@ -35,19 +35,40 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
       setTimeout(resolve, 500);
     });
     
-    // Wait for images to load
+    // Wait for images to load with better error handling
     const imgs = Array.from(tempContainer.querySelectorAll('img'));
+    console.log(`[PDF] Waiting for ${imgs.length} images to load...`);
+    
     await Promise.all(
-      imgs.map(img => 
-        img.complete ? Promise.resolve() : new Promise<void>(resolve => {
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-          setTimeout(() => resolve(), 2000);
-        })
-      )
+      imgs.map((img, index) => {
+        if (img.complete && img.naturalWidth > 0) {
+          console.log(`[PDF] Image ${index + 1} already loaded:`, img.src);
+          return Promise.resolve();
+        }
+        
+        console.log(`[PDF] Waiting for image ${index + 1}:`, img.src);
+        return new Promise<void>(resolve => {
+          const timeout = setTimeout(() => {
+            console.warn(`[PDF] Image ${index + 1} timed out:`, img.src);
+            resolve();
+          }, 5000); // Increased timeout to 5 seconds
+          
+          img.onload = () => {
+            clearTimeout(timeout);
+            console.log(`[PDF] Image ${index + 1} loaded successfully:`, img.src);
+            resolve();
+          };
+          
+          img.onerror = (e) => {
+            clearTimeout(timeout);
+            console.error(`[PDF] Image ${index + 1} failed to load:`, img.src, e);
+            resolve();
+          };
+        });
+      })
     );
     
-    console.log('[PDF] Invoice rendered, extracting HTML...');
+    console.log('[PDF] All images processed, extracting HTML...');
     
     // Get the complete HTML including styles
     const pdfElement = tempContainer.querySelector('#invoice-pdf-content');
@@ -61,14 +82,16 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
     let successCount = 0;
     let skipCount = 0;
     
-    for (const img of images) {
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
       try {
         if (img.src && !img.src.startsWith('data:')) {
           const originalSrc = img.src;
           
           // Verify image is actually loaded and decoded
           if (!img.complete || img.naturalWidth === 0) {
-            console.warn('[PDF] Skipping unloaded image:', originalSrc);
+            console.warn(`[PDF] Skipping unloaded image ${i + 1}:`, originalSrc, 
+              `(complete: ${img.complete}, naturalWidth: ${img.naturalWidth})`);
             skipCount++;
             continue;
           }

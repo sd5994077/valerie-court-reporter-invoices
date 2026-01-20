@@ -1,6 +1,5 @@
 import React from 'react';
 import type { InvoiceFormData } from '../types/invoice';
-import { VenmoQRCode } from './VenmoQRCode';
 
 const money = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
 const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -124,7 +123,16 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
           </div>
         </div>
         <div style={{ width: 200, textAlign: 'center' }}>
-          <VenmoQRCode hideCaption sizePx={160} tight scale={1.05} />
+          {/* Use regular img tag instead of Next Image for PDF generation compatibility */}
+          <div style={{ width: 164, height: 164, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #e9d5ff', borderRadius: '8px', padding: '2px', backgroundColor: 'white' }}>
+            <img 
+              src="/assets/Venmo-Val.jpg" 
+              alt="Venmo QR Code"
+              width={160}
+              height={160}
+              style={{ objectFit: 'cover', borderRadius: '4px', transform: 'scale(1.05)' }}
+            />
+          </div>
           <div style={{ fontSize: 11.5, color: '#6b7280', marginTop: 8, lineHeight: 1.25, whiteSpace: 'normal', wordBreak: 'break-word' }}>Scan QR code or search for <strong>@ValerieDeLeon-CSR</strong></div>
         </div>
       </div>
