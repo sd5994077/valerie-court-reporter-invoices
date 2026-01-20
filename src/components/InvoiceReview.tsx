@@ -117,12 +117,12 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
     const opt = {
       margin: [0.25, 0.4, 0.4, 0.4],
       filename: safeFileName,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { type: 'jpeg', quality: 0.95 }, // Slightly lower quality saves RAM
       html2canvas: { 
-        scale: isIOS ? 1.5 : 2, // Lower scale on iOS for better performance
+        scale: isIOS ? 1 : 2, // Scale 1 is safest for iOS to prevent RAM crashes
         useCORS: true,
-        letterRendering: true,
-        logging: false
+        logging: false,
+        removeContainer: true // Important for memory cleanup
       },
       jsPDF: { 
         unit: 'in', 
@@ -132,158 +132,57 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
     };
     
     if (isIOS) {
-      // iOS Safari: Use blob URL for viewing (fast), let Safari handle saving via Share sheet
-      console.log('[iOS PDF] Generating PDF as blob for iOS...');
+      console.log('[iOS PDF] Starting iOS-optimized PDF generation...');
+      console.log('[iOS PDF] Using scale: 1 for memory safety');
       
-      // Add timeout wrapper for PDF generation (prevent infinite hanging)
-      const generateWithTimeout = <T,>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
-        return Promise.race([
-          promise,
-          new Promise<T>((_, reject) => 
-            setTimeout(() => reject(new Error('PDF generation timed out after 30 seconds')), timeoutMs)
-          )
-        ]);
-      };
-
-      // Generate blob (much faster than data URI on iOS)
-      const pdfBlob = await generateWithTimeout(
-        html2pdf().set(opt).from(pdfElement).output('blob')
-      ) as Blob;
-      
-      console.log('[iOS PDF] PDF generated successfully, size:', Math.round(pdfBlob.size / 1024), 'KB');
-      
-      // Clean up temp container before navigating (reduces memory pressure on iOS)
-      root.unmount();
-      if (tempContainer && tempContainer.parentNode) tempContainer.parentNode.removeChild(tempContainer);
-
-      // Create blob URL
-      const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
-      
-      console.log('[iOS PDF] Opening PDF in new tab...');
-      
-      // Navigate the pre-opened tab if available; otherwise fall back.
-      const targetWindow = preOpenedWindow && !preOpenedWindow.closed ? preOpenedWindow : null;
-      
-      if (targetWindow) {
-        // Create a simple HTML wrapper with embedded PDF and instructions
-        targetWindow.document.open();
-        targetWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta charset="utf-8">
-            <title>${safeFileName}</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { 
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-                background: #f5f5f7;
-              }
-              #toolbar {
-                position: sticky;
-                top: 0;
-                background: rgba(255,255,255,0.95);
-                backdrop-filter: blur(10px);
-                border-bottom: 1px solid #e5e5e7;
-                padding: 12px 16px;
-                z-index: 100;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-              }
-              #instructions {
-                flex: 1;
-                font-size: 14px;
-                color: #1d1d1f;
-                line-height: 1.4;
-              }
-              #shareBtn {
-                background: #007aff;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                padding: 8px 16px;
-                font-size: 14px;
-                font-weight: 500;
-                cursor: pointer;
-                white-space: nowrap;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-              }
-              #shareBtn:active {
-                opacity: 0.7;
-              }
-              #pdfContainer {
-                width: 100%;
-                height: calc(100vh - 70px);
-                position: relative;
-              }
-              #pdf {
-                width: 100%;
-                height: 100%;
-                border: none;
-              }
-            </style>
-          </head>
-          <body>
-            <div id="toolbar">
-              <div id="instructions">
-                📱 Tap Share button to save
-              </div>
-              <button id="shareBtn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 1L8 11M8 1L11 4M8 1L5 4M3 11L3 13C3 13.5523 3.44772 14 4 14L12 14C12.5523 14 13 13.5523 13 13V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Share
-              </button>
-            </div>
-            <div id="pdfContainer">
-              <iframe id="pdf" src="${blobUrl}" type="application/pdf"></iframe>
-            </div>
-            <script>
-              // Native share for iOS
-              document.getElementById('shareBtn').onclick = async () => {
-                try {
-                  const response = await fetch('${blobUrl}');
-                  const blob = await response.blob();
-                  const file = new File([blob], '${safeFileName}', { type: 'application/pdf' });
-                  
-                  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                      files: [file],
-                      title: '${safeFileName}',
-                    });
-                  } else {
-                    // Fallback: use Safari's built-in share
-                    alert('Tap the Safari Share button at the top of the screen to save this PDF');
-                  }
-                } catch (err) {
-                  console.error('Share failed:', err);
-                  alert('Use Safari\\'s Share button (top bar) to save this PDF');
-                }
-              };
-            </script>
-          </body>
-          </html>
-        `);
-        targetWindow.document.close();
-        console.log('[iOS PDF] PDF embedded successfully with share functionality');
-      } else {
-        // Fallback: open blob URL directly
-        const newWindow = window.open(blobUrl, '_blank');
-        if (!newWindow) {
-          console.warn('[iOS PDF] Popup blocked, navigating current tab');
-          window.location.href = blobUrl;
+      try {
+        // Generate the PDF blob
+        const pdfBlob = await html2pdf().set(opt).from(pdfElement).output('blob') as Blob;
+        console.log('[iOS PDF] PDF generated, size:', Math.round(pdfBlob.size / 1024), 'KB');
+        
+        // Clean up temp container immediately to free memory
+        root.unmount();
+        if (tempContainer && tempContainer.parentNode) {
+          tempContainer.parentNode.removeChild(tempContainer);
         }
+
+        // Create a File object from the Blob (Better compatibility for Sharing)
+        const file = new File([pdfBlob], safeFileName, { type: 'application/pdf' });
+
+        // Try the Web Share API first (Best for iOS - native share sheet)
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          console.log('[iOS PDF] Using native Web Share API...');
+          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
+          
+          await navigator.share({
+            files: [file],
+            title: 'Invoice PDF',
+          });
+          
+          console.log('[iOS PDF] Share completed successfully!');
+          return { success: true, method: 'ios-share' };
+        }
+        
+        // Fallback: Direct Blob URL navigation
+        console.log('[iOS PDF] Web Share API not available, using blob URL fallback...');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        
+        if (preOpenedWindow && !preOpenedWindow.closed) {
+          preOpenedWindow.location.href = blobUrl;
+          console.log('[iOS PDF] Navigated pre-opened window to PDF');
+        } else {
+          window.location.assign(blobUrl);
+          console.log('[iOS PDF] Navigated current window to PDF');
+        }
+        
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        return { success: true, method: 'ios-view' };
+        
+      } catch (iosError) {
+        console.error('[iOS PDF] Generation failed:', iosError);
+        if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
+        throw iosError;
       }
-      
-      // Clean up blob URL after longer delay (Safari needs time to load it)
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 300000); // 5 minutes
-      
-      console.log('[iOS PDF] PDF opened successfully. Use Share button to save.');
-      return { success: true, method: 'ios-view' };
     } else {
       // Android/Desktop: Direct download
       await html2pdf().set(opt).from(pdfElement).save();
@@ -386,8 +285,10 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
       }
       
       // Provide appropriate feedback based on method used
-      if (result.method === 'ios-view') {
-        setToastMessage('📱 PDF opened! Tap the blue Share button or use Safari\'s share icon (top) to save.');
+      if (result.method === 'ios-share') {
+        setToastMessage('✅ PDF shared successfully!');
+      } else if (result.method === 'ios-view') {
+        setToastMessage('📱 PDF opened! Use Safari\'s share button to save.');
       } else {
         setToastMessage('✅ PDF downloaded successfully!');
       }
