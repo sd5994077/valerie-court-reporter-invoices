@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { Toast } from './Toast';
+import { generatePDF as generatePDFUtil } from '../utils/pdfGenerator';
+import type { InvoiceFormData } from '../types/invoice';
 
 // Currency formatting utility
 const formatCurrency = (amount: number) => {
@@ -163,127 +165,34 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
     }
   };
 
-  const isProbablyIOS = () => {
-    if (typeof navigator === 'undefined') return false;
-    const ua = navigator.userAgent || '';
-    const platform = (navigator as any).platform || '';
-    const maxTouchPoints = (navigator as any).maxTouchPoints || 0;
-    // iPadOS 13+ often reports as "MacIntel" but has touch points.
-    const iPadOS = platform === 'MacIntel' && maxTouchPoints > 1;
-    const iOSUA = /iPad|iPhone|iPod/.test(ua);
-    return iOSUA || iPadOS;
-  };
-
-  // PDF generation function
+  // PDF generation function - converts Invoice to InvoiceFormData and uses server-side generation
   const generatePDF = async (invoiceData: Invoice) => {
-    try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const React = (await import('react')).default;
-      const ReactDOM = (await import('react-dom/client')).default;
-      const { InvoicePDF } = await import('./InvoicePDF');
-      
-      // Convert Invoice to InvoiceFormData format
-      const invoiceFormData = {
-        invoiceNumber: invoiceData.invoiceNumber,
-        date: invoiceData.date,
-        dueDate: invoiceData.dueDate || invoiceData.date,
-        lineItems: invoiceData.lineItems.map(item => ({
-          number: item.number || 1,
-          description: item.description || '',
-          quantity: item.quantity,
-          rate: item.rate
-        })),
-        manualClient: {
-          name: invoiceData.manualClient?.name || '',
-          company: invoiceData.manualClient?.company,
-          address: invoiceData.manualClient?.address || '',
-          email: invoiceData.manualClient?.email,
-          phone: invoiceData.manualClient?.phone
-        },
-        customFields: {
-          ...invoiceData.customFields,
-          serviceType: invoiceData.customFields?.serviceType as 'Appeals' | 'Transcripts' | 'Other' | undefined
-        }
-      };
-      
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '-9999px';
-      document.body.appendChild(tempContainer);
-      
-      const root = ReactDOM.createRoot(tempContainer);
-      await new Promise<void>((resolve) => {
-        root.render(React.createElement(InvoicePDF, { invoiceData: invoiceFormData }));
-        setTimeout(resolve, 100);
-      });
-      
-      const pdfElement = tempContainer.querySelector('#invoice-pdf-content');
-      if (!pdfElement) throw new Error('Failed to render PDF content');
-
-      // Wait for images to load
-      const imgs = Array.from(pdfElement.querySelectorAll('img'));
-      await Promise.all(
-        imgs.map(img => 
-          img.complete ? Promise.resolve() : new Promise<void>(resolve => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            setTimeout(() => resolve(), 3000);
-          })
-        )
-      );
-
-      const isIOS = isProbablyIOS();
-      const pdfFilename = `${invoiceData.invoiceNumber}.pdf`;
-
-      const opt = {
-        margin: [0.25, 0.4, 0.4, 0.4],
-        filename: pdfFilename,
-        image: { type: 'jpeg', quality: 0.92 },
-        html2canvas: { scale: isIOS ? 1 : 2, useCORS: true, logging: false, removeContainer: true },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-      
-      if (isIOS) {
-        console.log('[iOS PDF] Generating with scale:1...');
-        
-        const pdfBlob = await html2pdf().set(opt).from(pdfElement).output('blob') as Blob;
-        console.log('[iOS PDF] Generated! Size:', Math.round(pdfBlob.size / 1024), 'KB');
-        
-        root.unmount();
-        if (tempContainer?.parentNode) tempContainer.parentNode.removeChild(tempContainer);
-
-        const file = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
-
-        // Try Web Share API (native iOS share sheet)
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          console.log('[iOS PDF] Opening native share sheet...');
-          await navigator.share({ files: [file], title: 'Invoice PDF' });
-          return { success: true, method: 'ios-share' };
-        }
-        
-        // Fallback: Open PDF in new tab
-        console.log('[iOS PDF] Share API unavailable, opening in new tab...');
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        const newTab = window.open(blobUrl, '_blank');
-        if (!newTab) window.location.href = blobUrl;
-        
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-        return { success: true, method: 'ios-view' };
-      } else {
-        // Android/Desktop: Direct download
-        await html2pdf().set(opt).from(pdfElement).save();
-        
-        // Clean up temporary container
-        root.unmount();
-        if (tempContainer && tempContainer.parentNode) tempContainer.parentNode.removeChild(tempContainer);
-        
-        return { success: true, method: 'download' };
+    // Convert Invoice to InvoiceFormData format
+    const invoiceFormData: InvoiceFormData = {
+      invoiceNumber: invoiceData.invoiceNumber,
+      date: invoiceData.date,
+      dueDate: invoiceData.dueDate || invoiceData.date,
+      lineItems: invoiceData.lineItems.map(item => ({
+        number: item.number || 1,
+        description: item.description || '',
+        quantity: item.quantity,
+        rate: item.rate
+      })),
+      manualClient: {
+        name: invoiceData.manualClient?.name || '',
+        company: invoiceData.manualClient?.company,
+        address: invoiceData.manualClient?.address || '',
+        email: invoiceData.manualClient?.email,
+        phone: invoiceData.manualClient?.phone
+      },
+      customFields: {
+        ...invoiceData.customFields,
+        serviceType: invoiceData.customFields?.serviceType as 'Appeals' | 'Transcripts' | 'Other' | undefined
       }
-    } catch (error) {
-      console.error('PDF generation failed:', error);
-      throw error;
-    }
+    };
+    
+    // Use the server-side PDF generation utility
+    return await generatePDFUtil(invoiceFormData);
   };
 
   const handleDownloadPDF = async (invoice: Invoice) => {

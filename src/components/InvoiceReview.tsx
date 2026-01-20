@@ -6,6 +6,7 @@ import { VenmoQRCode } from './VenmoQRCode';
 import { Toast } from './Toast';
 import { useRouter } from 'next/router';
 import { getBranding } from '../config/branding';
+import { generatePDF, isProbablyIOS } from '../utils/pdfGenerator';
 
 // Currency formatting utility
 const formatCurrency = (amount: number) => {
@@ -36,117 +37,6 @@ interface FinalizedInvoice extends InvoiceFormData {
   finalizedAt: string;
   pdfGenerated: boolean;
 }
-
-// PDF generation function with iOS compatibility
-const isProbablyIOS = () => {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent || '';
-  const platform = (navigator as any).platform || '';
-  const maxTouchPoints = (navigator as any).maxTouchPoints || 0;
-  // iPadOS 13+ often reports as "MacIntel" but has touch points.
-  const iPadOS = platform === 'MacIntel' && maxTouchPoints > 1;
-  const iOSUA = /iPad|iPhone|iPod/.test(ua);
-  return iOSUA || iPadOS;
-};
-
-const generatePDF = async (invoiceData: InvoiceFormData) => {
-  try {
-    const html2pdf = (await import('html2pdf.js')).default;
-    const React = (await import('react')).default;
-    const ReactDOM = (await import('react-dom/client')).default;
-    const { InvoicePDF } = await import('./InvoicePDF');
-
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '-9999px';
-    document.body.appendChild(tempContainer);
-
-    const root = ReactDOM.createRoot(tempContainer);
-    await new Promise<void>((resolve) => {
-      root.render(React.createElement(InvoicePDF, { invoiceData }));
-      setTimeout(resolve, 100);
-    });
-    const pdfElement = tempContainer.querySelector('#invoice-pdf-content') as HTMLElement | null;
-    if (!pdfElement) throw new Error('Failed to render PDF content');
-
-    // Wait for images to load
-    const imgs = Array.from(pdfElement.querySelectorAll('img'));
-    await Promise.all(
-      imgs.map(img => 
-        img.complete ? Promise.resolve() : new Promise<void>(resolve => {
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-          setTimeout(() => resolve(), 3000);
-        })
-      )
-    );
-
-    const today = new Date();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const yyyy = String(today.getFullYear());
-    const todayStamp = `${mm}${dd}${yyyy}`;
-
-    const invoiceNumber = invoiceData.invoiceNumber || '';
-    const invoiceSuffix = invoiceNumber.includes('-') ? invoiceNumber.split('-').pop() : invoiceNumber;
-    const rawCounty = (invoiceData.customFields && invoiceData.customFields.county) || '';
-    const countyCore = rawCounty.replace(/County$/i, '').trim();
-    const countyToken = (countyCore || rawCounty || 'Invoice').replace(/\s+/g, '').replace(/[^A-Za-z0-9]/g, '');
-    const safeFileName = `${invoiceSuffix || 'invoice'}-${countyToken}-${todayStamp}.pdf`;
-
-    const isIOS = isProbablyIOS();
-
-    const opt = {
-      margin: [0.25, 0.4, 0.4, 0.4],
-      filename: safeFileName,
-      image: { type: 'jpeg', quality: 0.92 },
-      html2canvas: { scale: isIOS ? 1 : 2, useCORS: true, logging: false, removeContainer: true },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    
-    if (isIOS) {
-      console.log('[iOS PDF] Generating with scale:1...');
-      
-      const pdfBlob = await html2pdf().set(opt).from(pdfElement).output('blob') as Blob;
-      console.log('[iOS PDF] Generated! Size:', Math.round(pdfBlob.size / 1024), 'KB');
-      
-      root.unmount();
-      if (tempContainer?.parentNode) tempContainer.parentNode.removeChild(tempContainer);
-
-      const file = new File([pdfBlob], safeFileName, { type: 'application/pdf' });
-
-      // Try Web Share API (native iOS share sheet)
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        console.log('[iOS PDF] Opening native share sheet...');
-        await navigator.share({ files: [file], title: 'Invoice PDF' });
-        return { success: true, method: 'ios-share' };
-      }
-      
-      // Fallback: Open PDF in new tab
-      console.log('[iOS PDF] Share API unavailable, opening in new tab...');
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      const newTab = window.open(blobUrl, '_blank');
-      if (!newTab) window.location.href = blobUrl;
-      
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-      return { success: true, method: 'ios-view' };
-      
-    } else {
-      // Android/Desktop: Direct download
-      await html2pdf().set(opt).from(pdfElement).save();
-      
-      // Clean up temporary container
-      root.unmount();
-      if (tempContainer && tempContainer.parentNode) tempContainer.parentNode.removeChild(tempContainer);
-      
-      return { success: true, method: 'download' };
-    }
-  } catch (error) {
-    console.error('PDF generation failed:', error);
-    throw error;
-  }
-};
 
 export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
   const router = useRouter();
