@@ -108,18 +108,32 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
     const isIOS = isProbablyIOS();
     
     if (isIOS) {
-      // Try Web Share API first (best for iOS)
+      // Try Web Share API first (best for iOS, but often fails after async operations)
       const file = new File([pdfBlob], filename, { type: 'application/pdf' });
       
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        console.log('[PDF] Using iOS share sheet...');
-        await navigator.share({ files: [file], title: 'Invoice PDF' });
-        return { success: true, method: 'ios-share' };
+        try {
+          console.log('[PDF] Attempting iOS share sheet...');
+          await navigator.share({ files: [file], title: 'Invoice PDF' });
+          console.log('[PDF] Share sheet succeeded!');
+          return { success: true, method: 'ios-share' };
+        } catch (shareError: any) {
+          // Share API failed (common after async operations), fall back to blob URL
+          console.log('[PDF] Share API failed, using blob URL fallback:', shareError.message);
+        }
       }
       
-      // Fallback: Open in new tab
+      // Fallback: Open in new tab (works reliably)
+      console.log('[PDF] Opening PDF in new tab...');
       const blobUrl = URL.createObjectURL(pdfBlob);
-      window.open(blobUrl, '_blank');
+      const newTab = window.open(blobUrl, '_blank');
+      
+      if (!newTab) {
+        // If popup blocked, try navigating current page
+        console.log('[PDF] Popup blocked, navigating current page...');
+        window.location.href = blobUrl;
+      }
+      
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
       return { success: true, method: 'ios-view' };
     } else {
