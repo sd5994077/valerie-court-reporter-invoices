@@ -99,10 +99,20 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
           // Create a canvas to convert image to base64
           const canvas = document.createElement('canvas');
           
-          // Use original dimensions to avoid any resizing issues
-          // This is safer and still embeds the image properly
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
+          // Resize large images to reduce payload (max 400px for QR codes, logos, etc.)
+          const MAX_SIZE = 400;
+          let targetWidth = img.naturalWidth;
+          let targetHeight = img.naturalHeight;
+          
+          if (targetWidth > MAX_SIZE || targetHeight > MAX_SIZE) {
+            const scale = Math.min(MAX_SIZE / targetWidth, MAX_SIZE / targetHeight);
+            targetWidth = Math.round(targetWidth * scale);
+            targetHeight = Math.round(targetHeight * scale);
+            console.log(`[PDF] Resizing image from ${img.naturalWidth}x${img.naturalHeight} to ${targetWidth}x${targetHeight}`);
+          }
+          
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
 
           const ctx = canvas.getContext('2d');
           if (!ctx) {
@@ -111,14 +121,17 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
             continue;
           }
           
-          // Draw image at original size
-          ctx.drawImage(img, 0, 0);
+          // Draw image with smoothing for good resize quality
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
           
-          // Convert to PNG to preserve transparency
-          const dataUrl = canvas.toDataURL('image/png');
+          // Use JPEG for photos/QR codes (smaller size), PNG only if needed
+          // Most invoice images don't need transparency
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           
           // Validate the data URL was created successfully
-          if (!dataUrl || !dataUrl.startsWith('data:image/png;base64,')) {
+          if (!dataUrl || dataUrl.length < 100) {
             console.warn('[PDF] Invalid data URL created for:', originalSrc);
             skipCount++;
             continue;
@@ -127,7 +140,7 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
           // Only replace src if conversion succeeded
           img.src = dataUrl;
           successCount++;
-          console.log(`[PDF] Converted image: ${originalSrc} (${img.naturalWidth}x${img.naturalHeight})`);
+          console.log(`[PDF] Converted image: ${originalSrc} → ${targetWidth}x${targetHeight} (${Math.round(dataUrl.length/1024)}KB)`);
         }
       } catch (err) {
         console.warn('[PDF] Failed to convert image to base64:', err);
@@ -182,8 +195,18 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.details || 'Server-side PDF generation failed');
+      let errorDetails = 'Server-side PDF generation failed';
+      try {
+        const errorData = await response.json();
+        errorDetails = errorData.details || errorData.error || errorDetails;
+        console.error('[PDF] Server error response:', errorData);
+      } catch (e) {
+        // Response wasn't JSON (e.g., HTML error page)
+        const text = await response.text().catch(() => 'Unable to read response');
+        console.error('[PDF] Server error (non-JSON):', text.slice(0, 500));
+        errorDetails = `Server returned ${response.status}: ${text.slice(0, 200)}`;
+      }
+      throw new Error(errorDetails);
     }
     
     console.log('[PDF] PDF generated on server, downloading...');

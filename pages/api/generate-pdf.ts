@@ -31,13 +31,21 @@ export default async function handler(
     console.log('[PDF API] Launching Chromium...');
 
     // Launch Chromium with serverless-optimized settings
+    const execPath = await chromium.executablePath();
+    console.log('[PDF API] Chromium path:', execPath);
+    
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [
+        ...chromium.args,
+        '--disable-dev-shm-usage', // Important for containerized environments
+        '--disable-gpu',
+        '--no-sandbox',
+      ],
       defaultViewport: {
-        width: 1280,
-        height: 720,
+        width: 816, // Letter width at 96dpi (8.5in)
+        height: 1056, // Letter height at 96dpi (11in)
       },
-      executablePath: await chromium.executablePath(),
+      executablePath: execPath,
       headless: true,
     });
 
@@ -46,15 +54,17 @@ export default async function handler(
     const page = await browser.newPage();
 
     // Set content with the invoice HTML
+    // Use 'domcontentloaded' instead of 'networkidle0' for faster loading
+    // Images are already base64-embedded, no network requests needed
     await page.setContent(invoiceHtml, {
-      waitUntil: ['load', 'networkidle0'],
-      timeout: 10000, // 10 second timeout for content loading (including fonts)
+      waitUntil: 'domcontentloaded',
+      timeout: 8000,
     });
 
-    console.log('[PDF API] Page content set, waiting for fonts...');
+    console.log('[PDF API] Page content set, waiting briefly for rendering...');
     
-    // Wait a bit for Google Fonts to load
-    await page.evaluate(() => document.fonts.ready);
+    // Small delay for CSS/layout to settle (fonts are fallback-friendly)
+    await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 500)));
     
     console.log('[PDF API] Fonts loaded, generating PDF...');
 
@@ -92,10 +102,17 @@ export default async function handler(
     res.status(200).end(pdfBuffer);
 
   } catch (error) {
-    console.error('[PDF API] Error generating PDF:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('[PDF API] Error generating PDF:', errorMessage);
+    console.error('[PDF API] Stack:', errorStack);
+    
+    // Return detailed error for debugging
     res.status(500).json({ 
       error: 'Failed to generate PDF',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorMessage,
+      // Include first part of stack for debugging
+      debug: errorStack?.split('\n').slice(0, 3).join(' | ')
     });
   }
 }
