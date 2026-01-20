@@ -75,7 +75,7 @@ export default async function handler(
     console.log('[PDF API] PDF generated successfully, size:', pdfBuffer.length, 'bytes');
     
     // Verify it's a valid PDF (should start with %PDF)
-    const pdfHeader = pdfBuffer.slice(0, 4).toString('utf-8');
+    const pdfHeader = pdfBuffer.slice(0, 4).toString();
     if (!pdfHeader.startsWith('%PDF')) {
       console.error('[PDF API] Invalid PDF generated, starts with:', pdfHeader);
       throw new Error('Generated file is not a valid PDF');
