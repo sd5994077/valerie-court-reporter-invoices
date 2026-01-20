@@ -9,8 +9,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* DEPLOYMENT VERSION INDICATOR - REMOVE AFTER TESTING */}
-      <div className="bg-gradient-to-r from-green-500 to-teal-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg sticky top-0 z-50">
-        🚀 STAGING v3.0-iOS-WebShare-API 🚀
+      <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg sticky top-0 z-50">
+        🚀 STAGING v3.1-iOS-NoPreOpen 🚀
       </div>
       
       <MobileNavigation currentPage="home" />

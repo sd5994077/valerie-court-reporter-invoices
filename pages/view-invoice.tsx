@@ -36,7 +36,7 @@ const isProbablyIOS = () => {
   return iOSUA || iPadOS;
 };
 
-const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Window | null) => {
+const generatePDF = async (invoiceData: InvoiceFormData) => {
   try {
     const html2pdf = (await import('html2pdf.js')).default;
     
@@ -47,7 +47,6 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
     
     if (!pdfElement) {
       // If the PDF element doesn't exist, we need to create it temporarily
-      // Import React DOM to render the component
       const React = (await import('react')).default;
       const ReactDOM = (await import('react-dom/client')).default;
       const { InvoicePDF } = await import('../src/components/InvoicePDF');
@@ -67,7 +66,6 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
       // Create a promise that resolves when rendering is complete
       await new Promise<void>((resolve) => {
         root.render(React.createElement(InvoicePDF, { invoiceData }));
-        // Give React time to render
         setTimeout(resolve, 100);
       });
       
@@ -78,103 +76,71 @@ const generatePDF = async (invoiceData: InvoiceFormData, preOpenedWindow?: Windo
       }
     }
 
-    // Wait for images and fonts to load (critical for iOS)
+    // Wait for images to load (critical for iOS)
     const imgs = Array.from(pdfElement.querySelectorAll('img'));
     await Promise.all(
       imgs.map(img => 
         img.complete ? Promise.resolve() : new Promise<void>(resolve => {
           img.onload = () => resolve();
-          img.onerror = () => resolve(); // Continue even if image fails
-          setTimeout(() => resolve(), 5000); // Timeout after 5s
+          img.onerror = () => resolve();
+          setTimeout(() => resolve(), 3000); // 3s timeout per image
         })
       )
     );
 
-    // Wait for fonts to be ready
-    if ('fonts' in document && (document as any).fonts?.ready) {
-      await Promise.race([
-        (document as any).fonts.ready,
-        new Promise(resolve => setTimeout(resolve, 3000)) // 3s timeout
-      ]);
-    }
-
-    // Detect iOS devices (Safari restrictions on blob downloads)
+    // Detect iOS devices
     const isIOS = isProbablyIOS();
     const pdfFilename = `${invoiceData.invoiceNumber}.pdf`;
 
     const opt = {
       margin: [0.25, 0.4, 0.4, 0.4],
       filename: pdfFilename,
-      image: { type: 'jpeg', quality: 0.95 }, // Slightly lower quality saves RAM
+      image: { type: 'jpeg', quality: 0.92 }, // Lower quality for iOS memory
       html2canvas: { 
-        scale: isIOS ? 1 : 2, // Scale 1 is safest for iOS to prevent RAM crashes
+        scale: isIOS ? 1 : 2, // Scale 1 prevents iOS RAM crashes
         useCORS: true,
         logging: false,
-        removeContainer: true // Important for memory cleanup
+        removeContainer: true
       },
-      jsPDF: { 
-        unit: 'in', 
-        format: 'letter', 
-        orientation: 'portrait'
-      }
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
     
     if (isIOS) {
-      console.log('[iOS PDF] Starting iOS-optimized PDF generation...');
-      console.log('[iOS PDF] Using scale: 1 for memory safety');
+      console.log('[iOS PDF] Generating with scale:1 for memory safety...');
       
-      try {
-        // Generate the PDF blob
-        const pdfBlob = await html2pdf().set(opt).from(pdfElement).output('blob') as Blob;
-        console.log('[iOS PDF] PDF generated, size:', Math.round(pdfBlob.size / 1024), 'KB');
-        
-        // Clean up temp container immediately to free memory
-        if (cleanupRoot) cleanupRoot.unmount();
-        if (cleanupTempContainer && cleanupTempContainer.parentNode) {
-          cleanupTempContainer.parentNode.removeChild(cleanupTempContainer);
-        }
-
-        // Create a File object from the Blob (Better compatibility for Sharing)
-        const file = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
-
-        // Try the Web Share API first (Best for iOS - native share sheet)
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          console.log('[iOS PDF] Using native Web Share API...');
-          if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close(); // Clean up blank tab
-          
-          await navigator.share({
-            files: [file],
-            title: 'Invoice PDF',
-          });
-          
-          console.log('[iOS PDF] Share completed successfully!');
-          return { success: true, method: 'ios-share' };
-        }
-        
-        // Fallback: Direct Blob URL navigation (if Share API not available)
-        console.log('[iOS PDF] Web Share API not available, using blob URL fallback...');
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        
-        if (preOpenedWindow && !preOpenedWindow.closed) {
-          // Navigate the pre-opened window to the blob URL (better than document.write)
-          preOpenedWindow.location.href = blobUrl;
-          console.log('[iOS PDF] Navigated pre-opened window to PDF');
-        } else {
-          // Last resort: navigate current page
-          window.location.assign(blobUrl);
-          console.log('[iOS PDF] Navigated current window to PDF');
-        }
-        
-        // Clean up blob URL after delay
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-        
-        return { success: true, method: 'ios-view' };
-        
-      } catch (iosError) {
-        console.error('[iOS PDF] Generation failed:', iosError);
-        if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
-        throw iosError;
+      // Generate the PDF blob
+      const pdfBlob = await html2pdf().set(opt).from(pdfElement).output('blob') as Blob;
+      console.log('[iOS PDF] Generated! Size:', Math.round(pdfBlob.size / 1024), 'KB');
+      
+      // Clean up immediately
+      if (cleanupRoot) cleanupRoot.unmount();
+      if (cleanupTempContainer?.parentNode) {
+        cleanupTempContainer.parentNode.removeChild(cleanupTempContainer);
       }
+
+      // Create File for sharing
+      const file = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
+
+      // Try Web Share API (native iOS share sheet)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        console.log('[iOS PDF] Opening native share sheet...');
+        await navigator.share({ files: [file], title: 'Invoice PDF' });
+        return { success: true, method: 'ios-share' };
+      }
+      
+      // Fallback: Open PDF in new tab (Safari will display it)
+      console.log('[iOS PDF] Share API unavailable, opening in new tab...');
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const newTab = window.open(blobUrl, '_blank');
+      
+      if (!newTab) {
+        // If popup blocked, navigate current page
+        window.location.href = blobUrl;
+      }
+      
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      return { success: true, method: 'ios-view' };
+      
     } else {
       // Android/Desktop: Direct download
       await html2pdf().set(opt).from(pdfElement).save();
@@ -235,42 +201,26 @@ export default function ViewInvoice() {
 
   const handleDownloadPDF = async () => {
     setPdfGenerating(true);
-    let preOpenedWindow: Window | null = null;
     
     try {
-      console.log('=== PDF DOWNLOAD STARTED ===');
-      console.log('Version: v2.1-iOS-Fix-BLOB-METHOD');
-      console.log('Is iOS:', isProbablyIOS());
-      console.log('User Agent:', navigator.userAgent);
-      
-      // iOS Safari often blocks popups if opened after async work; pre-open a tab synchronously.
-      preOpenedWindow = isProbablyIOS() ? window.open('', '_blank') : null;
-      if (preOpenedWindow && preOpenedWindow.document) {
-        preOpenedWindow.document.title = 'Generating PDF…';
-        preOpenedWindow.document.body.innerHTML = '<p style="font-family: system-ui; padding: 16px;">Generating PDF…</p>';
-      }
+      console.log('=== PDF DOWNLOAD v3.1 ===');
+      console.log('iOS:', isProbablyIOS(), '| UA:', navigator.userAgent.slice(0, 50));
 
-      const result = await generatePDF(invoiceData, preOpenedWindow);
+      const result = await generatePDF(invoiceData);
       
-      // Provide appropriate feedback based on method used
       if (result.method === 'ios-share') {
-        setToastMessage('✅ PDF shared successfully!');
+        setToastMessage('✅ PDF saved! Open Files app to view.');
       } else if (result.method === 'ios-view') {
-        setToastMessage('📱 PDF opened! Use Safari\'s share button to save.');
+        setToastMessage('📱 PDF opened! Tap Share icon to save to Files.');
       } else {
         setToastMessage('✅ PDF downloaded successfully!');
       }
       setShowToast(true);
     } catch (error) {
-      console.error('PDF generation failed:', error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
-      if (preOpenedWindow && !preOpenedWindow.closed) preOpenedWindow.close();
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      // VERY VISIBLE ERROR for debugging
-      alert(`❌ PDF ERROR:\n\n${errorMessage}\n\nCheck console for details`);
-      
-      setToastMessage(`❌ ${errorMessage}. Please try again.`);
+      console.error('PDF failed:', error);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      alert(`PDF Error: ${msg}`);
+      setToastMessage(`❌ ${msg}`);
       setShowToast(true);
     } finally {
       setPdfGenerating(false);
@@ -287,8 +237,8 @@ export default function ViewInvoice() {
     <>
       <div className="min-h-screen bg-gray-50">
         {/* DEPLOYMENT VERSION INDICATOR - REMOVE AFTER TESTING */}
-        <div className="bg-gradient-to-r from-green-500 to-teal-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg">
-          🚀 v3.0-iOS-WebShare-API 🚀
+        <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg">
+          🚀 v3.1-iOS-NoPreOpen 🚀
         </div>
         
         {/* Header with Action Buttons */}
