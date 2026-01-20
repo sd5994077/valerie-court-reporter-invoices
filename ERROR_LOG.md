@@ -214,9 +214,13 @@
   - **Corruption issue (attempt 1)**: Converting images to JPEG format caused corruption, likely due to transparency handling.
   - **Corruption issue (attempt 2)**: Image resizing logic was creating invalid data URLs when canvas operations failed silently.
   - **Server-side issues**: Using `res.send()` instead of `res.end()` for binary data, and setting `Content-Length` manually could cause truncation.
+  - **Image loading failure**: Next.js `<Image>` component in `VenmoQRCode` doesn't load properly in off-screen temporary container, causing "Skipping unloaded image" and invalid PDF generation.
 - Affected files:
   - `src/utils/pdfGenerator.ts` - Client-side image processing and PDF download
   - `pages/api/generate-pdf.ts` - Server-side PDF generation
+  - `src/components/InvoicePDF.tsx` - PDF layout component
+  - `src/components/InvoicePDFOnePager.tsx` - Single-page PDF variant
+  - `src/components/VenmoQRCode.tsx` - Venmo QR code display (not suitable for PDF)
 - Fix implemented:
   - **Robust Image Conversion** (Client):
     - Uses original image dimensions (no resizing) to avoid canvas corruption
@@ -233,6 +237,12 @@
     - Removed manual `Content-Length` header (let Node.js handle it)
     - Added `Cache-Control: no-store` header
     - Changed to `inline` disposition for better iOS compatibility
+  - **Image Loading Fix** (Critical):
+    - Replaced Next.js `<Image>` component with regular `<img>` tags in PDF components
+    - Next.js Image doesn't load in off-screen containers (lazy loading behavior)
+    - Regular img tags load immediately and reliably
+    - Improved image load wait logic with per-image logging
+    - Increased timeout from 2s to 5s per image
   - **Filename Enhancement**:
     - Added county to filename format: `INV-2026-0001-Travis.pdf`
     - Falls back to invoice number only if no county specified
