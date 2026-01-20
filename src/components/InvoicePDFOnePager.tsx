@@ -12,6 +12,9 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
     total: it.quantity * it.rate
   }));
   const subtotal = items.reduce((s, it) => s + it.total, 0);
+  const serviceTypeValue = invoiceData.customFields?.serviceType === 'Other'
+    ? (invoiceData.customFields?.serviceTypeOther || 'Other')
+    : invoiceData.customFields?.serviceType;
 
   const cellPad = '8px 10px';
   const rowHeight = 28;
@@ -59,6 +62,23 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
           <span style={{ fontSize: 12 }}>{invoiceData.invoiceNumber}</span>
         </div>
       </div>
+
+      {(invoiceData.customFields?.causeNumber || serviceTypeValue) && (
+        <div className="no-break" style={{ display: 'flex', justifyContent: 'flex-end', gap: 18, marginBottom: 10 }}>
+          {invoiceData.customFields?.causeNumber && (
+            <div>
+              <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Cause Number: </span>
+              <span style={{ fontSize: 12 }}>{invoiceData.customFields.causeNumber}</span>
+            </div>
+          )}
+          {serviceTypeValue && (
+            <div>
+              <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Service Type: </span>
+              <span style={{ fontSize: 12 }}>{serviceTypeValue}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Simplified - No separate Invoice Details section */}
 

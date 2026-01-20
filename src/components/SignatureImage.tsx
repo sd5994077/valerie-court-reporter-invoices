@@ -12,17 +12,27 @@ export function SignatureImage({ showDetails = true }: SignatureImageProps) {
         @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
       `}</style>
       
-      <div style={{ 
-        fontFamily: "'Great Vibes', 'Dancing Script', 'Brush Script MT', cursive",
-        fontSize: "52px",
-        lineHeight: "1.2",
-        marginBottom: "8px",
-        color: "#7c3aed",
-        fontWeight: "400",
-        letterSpacing: "0.5px",
-        minHeight: "65px"
-      }}>
-        Valerie De Leon
+      {/* When used in PDFs (showDetails=false), bottom-align the signature so it sits closer to the line */}
+      <div
+        style={{
+          height: showDetails ? 'auto' : '65px',
+          display: showDetails ? 'block' : 'flex',
+          alignItems: showDetails ? undefined : 'flex-end'
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "'Great Vibes', 'Dancing Script', 'Brush Script MT', cursive",
+            fontSize: '52px',
+            lineHeight: '1.2',
+            marginBottom: showDetails ? '8px' : '0px',
+            color: '#7c3aed',
+            fontWeight: '400',
+            letterSpacing: '0.5px'
+          }}
+        >
+          Valerie De Leon
+        </div>
       </div>
       
       {showDetails && (

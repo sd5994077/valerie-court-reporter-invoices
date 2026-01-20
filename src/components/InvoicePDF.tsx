@@ -34,6 +34,9 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
   
   const grandTotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
   const includeJudgeSignature = !!invoiceData.customFields?.includeJudgeSignature;
+  const serviceTypeValue = invoiceData.customFields?.serviceType === 'Other'
+    ? (invoiceData.customFields?.serviceTypeOther || 'Other')
+    : invoiceData.customFields?.serviceType;
   
   // Compact mode for long invoices to keep high-quality one-page output when possible
   const COMPACT_THRESHOLD = 12;
@@ -151,6 +154,14 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                   <span style={{ color: '#333' }}>{invoiceData.customFields.causeNumber}</span>
                 </div>
             </div>
+        )}
+        {serviceTypeValue && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+            <div>
+              <span style={{ fontWeight: '600', color: '#666' }}>Service Type: </span>
+              <span style={{ color: '#333' }}>{serviceTypeValue}</span>
+            </div>
+          </div>
         )}
       </div>
 
