@@ -237,7 +237,7 @@ export default function ViewInvoice() {
     <>
       <div className="min-h-screen bg-gray-50">
         {/* DEPLOYMENT VERSION INDICATOR - REMOVE AFTER TESTING */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg">
+        <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-black py-2 px-4 text-center font-bold text-lg shadow-lg">
           🚀 v3.1-iOS-NoPreOpen 🚀
         </div>
         
