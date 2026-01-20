@@ -206,25 +206,40 @@
 
 ### 2026-01-20 — PDF Size Explosion, API Timeout, and Corruption
 
-- Issue: PDF generation failing with timeouts, and successful PDFs were ~9MB in size. After initial fix, PDFs became corrupted and wouldn't open.
-- Impact: Users unable to generate PDFs, or PDFs too large to email/share easily. Corrupted PDFs showed "file type not supported or damaged" error.
+- Issue: PDF generation failing with timeouts, and successful PDFs were ~9MB in size. After initial fix attempts, PDFs became corrupted and wouldn't open on both iOS and desktop.
+- Impact: Users unable to generate PDFs, or PDFs too large to email/share easily. Corrupted PDFs showed "file type not supported or damaged" error in Adobe Acrobat and other PDF readers.
 - Root cause: 
   - **Initial problem**: The client-side PDF generator was converting all images (including the 169KB Venmo QR code) to **uncompressed PNG** Base64 strings at **full native resolution**.
   - This inflated a 169KB JPEG into a multi-megabyte PNG payload, exceeding the 10MB API request limit and causing timeouts.
-  - **Corruption issue**: Converting images to JPEG format caused corruption, likely due to transparency handling or quality issues.
-- Affected file:
-  - `src/utils/pdfGenerator.ts`
+  - **Corruption issue (attempt 1)**: Converting images to JPEG format caused corruption, likely due to transparency handling.
+  - **Corruption issue (attempt 2)**: Image resizing logic was creating invalid data URLs when canvas operations failed silently.
+  - **Server-side issues**: Using `res.send()` instead of `res.end()` for binary data, and setting `Content-Length` manually could cause truncation.
+- Affected files:
+  - `src/utils/pdfGenerator.ts` - Client-side image processing and PDF download
+  - `pages/api/generate-pdf.ts` - Server-side PDF generation
 - Fix implemented:
-  - **Smart Image Optimization**: 
-    - Resized images to 2x their display size (for print quality) instead of using full native resolution.
-    - Capped max dimension at 1200px.
-    - **Uses PNG format** to preserve transparency and avoid corruption.
-    - Size reduction now comes from resizing alone, not format conversion.
+  - **Robust Image Conversion** (Client):
+    - Uses original image dimensions (no resizing) to avoid canvas corruption
+    - Validates images are fully loaded before conversion (`img.complete` check)
+    - Validates data URL output before replacing image src
+    - Skips failed conversions gracefully (logs warning, keeps original src)
+    - Detailed logging of conversion success/failure
+  - **PDF Validation** (Client & Server):
+    - Server verifies output starts with `%PDF` magic bytes
+    - Client verifies response starts with `%PDF` before creating blob
+    - Throws clear errors if invalid PDF detected
+  - **Server Best Practices**:
+    - Changed `res.send()` to `res.end()` for raw binary data
+    - Removed manual `Content-Length` header (let Node.js handle it)
+    - Added `Cache-Control: no-store` header
+    - Changed to `inline` disposition for better iOS compatibility
   - **Filename Enhancement**:
     - Added county to filename format: `INV-2026-0001-Travis.pdf`
-    - Falls back to invoice number only if no county specified.
+    - Falls back to invoice number only if no county specified
 - Verification:
-  - PDF payload size significantly reduced (smaller than 9MB).
-  - PDFs open correctly without corruption.
-  - Image quality maintained for print.
-  - Filenames now include county for better organization.
+  - ✓ Server validates PDF output before sending
+  - ✓ Client validates PDF before download/open
+  - ✓ Image conversion failures don't break PDF generation
+  - ✓ Clear error messages if PDF is invalid
+  - ✓ Filenames include county for better organization
+  - ✓ Works on both iOS and desktop

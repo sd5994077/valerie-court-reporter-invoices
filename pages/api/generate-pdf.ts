@@ -73,14 +73,23 @@ export default async function handler(
     await browser.close();
 
     console.log('[PDF API] PDF generated successfully, size:', pdfBuffer.length, 'bytes');
+    
+    // Verify it's a valid PDF (should start with %PDF)
+    const pdfHeader = pdfBuffer.slice(0, 4).toString('utf-8');
+    if (!pdfHeader.startsWith('%PDF')) {
+      console.error('[PDF API] Invalid PDF generated, starts with:', pdfHeader);
+      throw new Error('Generated file is not a valid PDF');
+    }
 
-    // Set response headers for PDF download
+    // Set response headers for PDF download (best practices)
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename || 'invoice.pdf'}"`);
-    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    // Use inline for better iOS compatibility, client handles actual download
+    res.setHeader('Content-Disposition', `inline; filename="${filename || 'invoice.pdf'}"`);
+    // Don't set Content-Length - let Node.js handle it automatically to avoid truncation
 
-    // Send the PDF
-    res.status(200).send(pdfBuffer);
+    // Send the PDF using .end() for raw binary data
+    res.status(200).end(pdfBuffer);
 
   } catch (error) {
     console.error('[PDF API] Error generating PDF:', error);
