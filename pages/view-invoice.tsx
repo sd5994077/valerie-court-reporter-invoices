@@ -4,6 +4,7 @@ import type { InvoiceFormData } from '../src/types/invoice';
 import { SignatureImage } from '../src/components/SignatureImage';
 import { VenmoQRCode } from '../src/components/VenmoQRCode';
 import { Toast } from '../src/components/Toast';
+import { generatePDF, isProbablyIOS } from '../src/utils/pdfGenerator';
 
 // Currency formatting utility
 const formatCurrency = (amount: number) => {
@@ -22,138 +23,6 @@ const formatDate = (dateString: string) => {
     month: 'short',
     day: 'numeric'
   });
-};
-
-// PDF generation function
-const isProbablyIOS = () => {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent || '';
-  const platform = (navigator as any).platform || '';
-  const maxTouchPoints = (navigator as any).maxTouchPoints || 0;
-  // iPadOS 13+ often reports as "MacIntel" but has touch points.
-  const iPadOS = platform === 'MacIntel' && maxTouchPoints > 1;
-  const iOSUA = /iPad|iPhone|iPod/.test(ua);
-  return iOSUA || iPadOS;
-};
-
-const generatePDF = async (invoiceData: InvoiceFormData) => {
-  try {
-    const html2pdf = (await import('html2pdf.js')).default;
-    
-    // Find the existing PDF content element or create it
-    let pdfElement = document.getElementById('invoice-pdf-content');
-    let cleanupTempContainer: HTMLDivElement | null = null;
-    let cleanupRoot: { unmount: () => void } | null = null;
-    
-    if (!pdfElement) {
-      // If the PDF element doesn't exist, we need to create it temporarily
-      const React = (await import('react')).default;
-      const ReactDOM = (await import('react-dom/client')).default;
-      const { InvoicePDF } = await import('../src/components/InvoicePDF');
-      
-      // Create a temporary container
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '-9999px';
-      document.body.appendChild(tempContainer);
-      cleanupTempContainer = tempContainer;
-      
-      // Render the InvoicePDF component
-      const root = ReactDOM.createRoot(tempContainer);
-      cleanupRoot = root;
-      
-      // Create a promise that resolves when rendering is complete
-      await new Promise<void>((resolve) => {
-        root.render(React.createElement(InvoicePDF, { invoiceData }));
-        setTimeout(resolve, 100);
-      });
-      
-      pdfElement = tempContainer.querySelector('#invoice-pdf-content');
-      
-      if (!pdfElement) {
-        throw new Error('Failed to render PDF content');
-      }
-    }
-
-    // Wait for images to load (critical for iOS)
-    const imgs = Array.from(pdfElement.querySelectorAll('img'));
-    await Promise.all(
-      imgs.map(img => 
-        img.complete ? Promise.resolve() : new Promise<void>(resolve => {
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-          setTimeout(() => resolve(), 3000); // 3s timeout per image
-        })
-      )
-    );
-
-    // Detect iOS devices
-    const isIOS = isProbablyIOS();
-    const pdfFilename = `${invoiceData.invoiceNumber}.pdf`;
-
-    const opt = {
-      margin: [0.25, 0.4, 0.4, 0.4],
-      filename: pdfFilename,
-      image: { type: 'jpeg', quality: 0.92 }, // Lower quality for iOS memory
-      html2canvas: { 
-        scale: isIOS ? 1 : 2, // Scale 1 prevents iOS RAM crashes
-        useCORS: true,
-        logging: false,
-        removeContainer: true
-      },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    
-    if (isIOS) {
-      console.log('[iOS PDF] Generating with scale:1 for memory safety...');
-      
-      // Generate the PDF blob
-      const pdfBlob = await html2pdf().set(opt).from(pdfElement).output('blob') as Blob;
-      console.log('[iOS PDF] Generated! Size:', Math.round(pdfBlob.size / 1024), 'KB');
-      
-      // Clean up immediately
-      if (cleanupRoot) cleanupRoot.unmount();
-      if (cleanupTempContainer?.parentNode) {
-        cleanupTempContainer.parentNode.removeChild(cleanupTempContainer);
-      }
-
-      // Create File for sharing
-      const file = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
-
-      // Try Web Share API (native iOS share sheet)
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        console.log('[iOS PDF] Opening native share sheet...');
-        await navigator.share({ files: [file], title: 'Invoice PDF' });
-        return { success: true, method: 'ios-share' };
-      }
-      
-      // Fallback: Open PDF in new tab (Safari will display it)
-      console.log('[iOS PDF] Share API unavailable, opening in new tab...');
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      const newTab = window.open(blobUrl, '_blank');
-      
-      if (!newTab) {
-        // If popup blocked, navigate current page
-        window.location.href = blobUrl;
-      }
-      
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-      return { success: true, method: 'ios-view' };
-      
-    } else {
-      // Android/Desktop: Direct download
-      await html2pdf().set(opt).from(pdfElement).save();
-      
-      if (cleanupRoot) cleanupRoot.unmount();
-      if (cleanupTempContainer && cleanupTempContainer.parentNode) cleanupTempContainer.parentNode.removeChild(cleanupTempContainer);
-      
-      return { success: true, method: 'download' };
-    }
-  } catch (error) {
-    console.error('PDF generation failed:', error);
-    throw error;
-  }
 };
 
 export default function ViewInvoice() {
@@ -276,8 +145,8 @@ export default function ViewInvoice() {
     <>
       <div className="min-h-screen bg-gray-50">
         {/* DEPLOYMENT VERSION INDICATOR - REMOVE AFTER TESTING */}
-        <div className="bg-gradient-to-r from-pink-500 to-rose-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg">
-          🐛 v3.2-DEBUG-CONSOLE 🐛
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg">
+          🚀 v4.0-SERVER-SIDE-PDF 🚀
         </div>
         
         {/* Header with Action Buttons */}
