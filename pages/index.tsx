@@ -5,13 +5,16 @@ import Link from 'next/link';
 
 export default function HomePage() {
   const branding = getBranding();
+  const isProduction = process.env.VERCEL_ENV === 'production';
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* DEPLOYMENT VERSION INDICATOR - REMOVE AFTER TESTING */}
-      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg sticky top-0 z-50">
-        🚀 STAGING v4.0-SERVER-SIDE-PDF 🚀
-      </div>
+      {/* STAGING BANNER - Only show on non-production environments */}
+      {!isProduction && (
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-4 text-center font-bold text-lg shadow-lg sticky top-0 z-50">
+          🚀 STAGING v4.0-SERVER-SIDE-PDF 🚀
+        </div>
+      )}
       
       <MobileNavigation currentPage="home" />
 
