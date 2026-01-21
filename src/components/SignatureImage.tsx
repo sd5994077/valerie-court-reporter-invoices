@@ -15,7 +15,7 @@ export function SignatureImage({ showDetails = true }: SignatureImageProps) {
       {/* When used in PDFs (showDetails=false), bottom-align the signature so it sits closer to the line */}
       <div
         style={{
-          height: showDetails ? 'auto' : '45px',
+          height: showDetails ? 'auto' : '70px',
           display: showDetails ? 'block' : 'flex',
           alignItems: showDetails ? undefined : 'flex-end'
         }}
