@@ -373,13 +373,13 @@ export default function AppealsPage() {
     <div className="min-h-screen bg-gray-50">
       <MobileNavigation currentPage="appeals" />
 
-      <header className="bg-white border-b">
+      <header className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 text-white font-bold">A</span>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-purple-700 text-white font-bold shadow-md">A</span>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Appeals Board</h1>
-              <p className="text-xs text-gray-500 -mt-0.5">Trello-style workflow + deadline tracking</p>
+              <p className="text-xs text-gray-600 -mt-0.5">Trello-style workflow + deadline tracking</p>
             </div>
           </div>
           
@@ -1028,8 +1028,21 @@ function AppealEditModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
-      <div className="w-full max-w-[95vw] sm:max-w-3xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col overflow-x-hidden">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto overscroll-contain" 
+      style={{ touchAction: 'none' }}
+      onClick={(e) => {
+        // Close modal when clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="w-full max-w-[95vw] sm:max-w-3xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col overflow-x-hidden" 
+        style={{ touchAction: 'auto' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b p-4 flex-shrink-0">
           <div className="flex items-center gap-3">
             <h3 className="text-lg font-semibold">{getTitle()}</h3>
@@ -1274,8 +1287,21 @@ function AppealForm({ onClose, onCreate }: { onClose: () => void; onCreate: (a: 
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
-      <div className="w-full max-w-[95vw] sm:max-w-2xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col overflow-x-hidden">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto overscroll-contain" 
+      style={{ touchAction: 'none' }}
+      onClick={(e) => {
+        // Close modal when clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="w-full max-w-[95vw] sm:max-w-2xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col overflow-x-hidden" 
+        style={{ touchAction: 'auto' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b p-4 flex-shrink-0">
           <h3 className="text-lg font-semibold">New Appeal</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="Close modal">
