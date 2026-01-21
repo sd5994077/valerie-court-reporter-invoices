@@ -291,6 +291,16 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                 </div>
               </div>
 
+              {/* Invoice-level Comments (Optional) */}
+              {invoiceData.customFields?.comments && (
+                <div className="mb-6 sm:mb-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Invoice Comments:</h3>
+                  <p className="text-sm text-gray-700 whitespace-pre-line">
+                    {invoiceData.customFields.comments}
+                  </p>
+                </div>
+              )}
+
               {/* Line Items Table */}
               <div className="mb-6 sm:mb-8">
                 {/* Desktop Table */}

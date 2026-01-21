@@ -80,6 +80,19 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
         </div>
       )}
 
+      {invoiceData.customFields?.comments && (
+        <div className="no-break" style={{ marginBottom: 12 }}>
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ fontWeight: 800, fontSize: 11.5, color: '#92400e', marginBottom: 6, letterSpacing: 0.2 }}>
+              INVOICE COMMENTS
+            </div>
+            <div style={{ fontSize: 12, color: '#374151', whiteSpace: 'pre-line' }}>
+              {invoiceData.customFields.comments}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Simplified - No separate Invoice Details section */}
 
       {/* Items table - Matching Image Layout */}

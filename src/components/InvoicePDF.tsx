@@ -163,6 +163,24 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
             </div>
           </div>
         )}
+
+        {invoiceData.customFields?.comments && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ 
+              backgroundColor: '#fffbeb',
+              border: '1px solid #fde68a',
+              borderRadius: 8,
+              padding: '12px 14px'
+            }}>
+              <div style={{ fontWeight: 700, color: '#92400e', fontSize: 13, marginBottom: 6 }}>
+                Invoice Comments:
+              </div>
+              <div style={{ whiteSpace: 'pre-line', color: '#374151', fontSize: 13 }}>
+                {invoiceData.customFields.comments}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Simplified - No separate Invoice Details section */}

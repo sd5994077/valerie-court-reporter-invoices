@@ -112,6 +112,9 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   // Service Type
   const [serviceType, setServiceType] = useState('');
   const [serviceTypeOther, setServiceTypeOther] = useState('');
+
+  // Invoice-level Comments (optional)
+  const [comments, setComments] = useState('');
   
   // Judge confirmation modal - REMOVED/REPLACED by new dropdown logic
   // const [showJudgeModal, setShowJudgeModal] = useState(false);
@@ -330,6 +333,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
         dateOfHearing,
         includeJudgeSignature,
         judgeName: finalJudgeName,
+        comments: comments.trim() ? comments.trim() : undefined,
         serviceType: serviceType as 'Appeals' | 'Transcripts' | 'Other' | undefined,
         serviceTypeOther: serviceType === 'Other' ? serviceTypeOther : undefined
       }
@@ -355,6 +359,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
         setCaseName(draftData.customFields.caseName || ''); // Populate Case Name
         setDateOfHearing(draftData.customFields.dateOfHearing || '');
         setIncludeJudgeSignature(!!draftData.customFields.includeJudgeSignature);
+        setComments(draftData.customFields.comments || '');
         
         // Handle Judge Name
         const draftJudge = draftData.customFields.judgeName;
@@ -790,6 +795,24 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                   Grand Total: <span className="text-gray-800">{formatCurrency(grandTotal)}</span>
                 </p>
               </div>
+            </div>
+
+            {/* Invoice-level Comments (Optional) */}
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Invoice Comments (Optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Optional notes to appear on the invoice/PDF (e.g., payment instructions, special notes)"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm resize-none"
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                onBlur={() => handleFieldBlur('comments')}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This will appear on the PDF if provided.
+              </p>
             </div>
           </div>
         </div>
