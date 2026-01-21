@@ -180,6 +180,40 @@ export default function AppealsPage() {
 
   const columns: AppealStatus[] = ['Intake', 'Active', 'Scope', 'Proofread', 'Awaiting Extension', 'Submitted', 'Completed', 'Archived'];
 
+  // Memoize sorted appeals by column for performance
+  const appealsByColumn = useMemo(() => {
+    const result: Record<AppealStatus, Appeal[]> = {
+      'Intake': [],
+      'Active': [],
+      'Scope': [],
+      'Proofread': [],
+      'Awaiting Extension': [],
+      'Submitted': [],
+      'Completed': [],
+      'Archived': [],
+    };
+    
+    filteredAppeals.forEach((appeal) => {
+      result[appeal.status].push(appeal);
+    });
+    
+    // Sort each column
+    Object.keys(result).forEach((status) => {
+      const col = status as AppealStatus;
+      if (col === 'Archived') {
+        // Archived: sort by updatedAt (newest first), limit to 50 unless showAllArchived
+        result[col] = result[col]
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .slice(0, showAllArchived ? undefined : 50);
+      } else {
+        // Other columns: sort by days left (urgent first)
+        result[col] = result[col].sort((a, b) => daysLeft(a) - daysLeft(b));
+      }
+    });
+    
+    return result;
+  }, [filteredAppeals, showAllArchived]);
+
   // Helper: Determine if cards in a column should be compact
   // Mobile: compact if multiple cards, Desktop: compact if more than 5 cards
   function shouldBeCompact(status: AppealStatus, count: number): boolean {
@@ -358,28 +392,44 @@ export default function AppealsPage() {
               </div>
               <input
                 type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                 placeholder="Search appeals..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                  title="Clear search"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
           <div className="flex items-center gap-2 justify-end">
             <button 
               onClick={exportToCSV}
-              className="hidden sm:flex rounded-xl border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 items-center gap-2 print:hidden"
+              className="flex rounded-xl border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 items-center gap-2 print:hidden"
+              aria-label="Export to CSV"
+              title="Export to CSV"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              <span>Export CSV</span>
+              <span className="hidden sm:inline">Export CSV</span>
             </button>
             <button 
               onClick={() => window.print()}
-              className="hidden sm:flex rounded-xl border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 items-center gap-2 print:hidden"
+              className="flex rounded-xl border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 items-center gap-2 print:hidden"
+              aria-label="Export to PDF (Print)"
+              title="Export to PDF (Print)"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"/></svg>
-              <span>Export PDF</span>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"/></svg>
+              <span className="hidden sm:inline">Export PDF</span>
             </button>
             <button onClick={() => setShowForm(true)} className="rounded-xl bg-purple-600 text-white px-4 py-2 font-semibold hover:bg-purple-700 print:hidden">
               New Appeal
@@ -426,7 +476,8 @@ export default function AppealsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-6">
           {columns.map((col) => {
-            const colCount = filteredAppeals.filter((a) => a.status === col).length;
+            const colAppeals = appealsByColumn[col];
+            const colCount = colAppeals.length;
             const isEmptyMobile = isMobile && colCount === 0;
             
             // Show collapsed version on mobile when empty
@@ -455,15 +506,7 @@ export default function AppealsPage() {
                 </div>
                 <div className="space-y-3">
                 {(() => {
-                  const colAppeals = col === 'Archived' 
-                    ? filteredAppeals
-                        .filter((a) => a.status === col)
-                        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-                        .slice(0, showAllArchived ? undefined : 50)
-                    : filteredAppeals
-                        .filter((a) => a.status === col)
-                        .sort((a, b) => daysLeft(a) - daysLeft(b));
-                  
+                  // Use pre-computed appeals from memoized appealsByColumn
                   const isCompactMode = shouldBeCompact(col, colAppeals.length);
                   
                   return colAppeals.map((a) => {
@@ -532,15 +575,20 @@ export default function AppealsPage() {
                     );
                   });
                 })()}
-                {col === 'Archived' && filteredAppeals.filter((a) => a.status === col).length > 50 && (
+                {col === 'Archived' && !showAllArchived && filteredAppeals.filter((a) => a.status === col).length > 50 && (
                   <button
                     onClick={() => setShowAllArchived(!showAllArchived)}
                     className="w-full text-sm text-purple-600 hover:text-purple-700 font-medium py-2"
                   >
-                    {showAllArchived 
-                      ? `Show Less (${filteredAppeals.filter((a) => a.status === col).length - 50} hidden)`
-                      : `View All (${filteredAppeals.filter((a) => a.status === col).length - 50} more)`
-                    }
+                    {`View All (${filteredAppeals.filter((a) => a.status === col).length - 50} more)`}
+                  </button>
+                )}
+                {col === 'Archived' && showAllArchived && filteredAppeals.filter((a) => a.status === col).length > 50 && (
+                  <button
+                    onClick={() => setShowAllArchived(!showAllArchived)}
+                    className="w-full text-sm text-purple-600 hover:text-purple-700 font-medium py-2"
+                  >
+                    {`Show Less (${filteredAppeals.filter((a) => a.status === col).length - 50} hidden)`}
                   </button>
                 )}
                   {colCount === 0 && (
@@ -652,10 +700,13 @@ function AppealCard({
   const eff = effectiveDeadline(appeal);
   const extLeft = 3 - appeal.extensions.length;
 
+  // Disable dragging on mobile (touch devices)
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  
   return (
     <div
-      draggable
-      onDragStart={(e) => onDragStart(e, appeal.id)}
+      draggable={!isTouchDevice}
+      onDragStart={(e) => !isTouchDevice && onDragStart(e, appeal.id)}
       onClick={onEdit}
       className={`group rounded-xl ${getBackgroundClass(appeal)} p-3 shadow hover:shadow-md border ${getBorderClass(appeal)} cursor-pointer relative`}
     >
@@ -688,7 +739,7 @@ function AppealCard({
 
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <select
-            className="text-xs sm:text-sm rounded-lg border px-2 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 max-w-[100px]"
+            className="text-xs sm:text-sm rounded-lg border px-2 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 max-w-[140px] sm:max-w-[160px]"
             value={appeal.status}
             onChange={(e) => {
               const newStatus = e.target.value as AppealStatus;
@@ -775,6 +826,7 @@ function CompactCard({
               onClick={(e) => { e.stopPropagation(); onExpand(); }} 
               className="text-gray-400 hover:text-purple-600 transition" 
               title="Expand"
+              aria-label="Expand appeal details"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m19 9-7 7-7-7" />
@@ -782,7 +834,12 @@ function CompactCard({
             </button>
           )}
           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
-            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="text-gray-400 hover:text-purple-600" title={isArchived ? "View (Read-only)" : "Edit"}>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onEdit(); }} 
+              className="text-gray-400 hover:text-purple-600" 
+              title={isArchived ? "View (Read-only)" : "Edit"}
+              aria-label={isArchived ? "View appeal (read-only)" : "Edit appeal"}
+            >
               {isArchived ? (
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1-.518 1.006L7 15v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-5l4.964-1.672a1.012 1.012 0 0 1 .518-1.006L21 11.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v5.5z"/></svg>
               ) : (
@@ -790,7 +847,12 @@ function CompactCard({
               )}
             </button>
             {!isArchived && onDelete && (
-              <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-gray-400 hover:text-red-600" title="Delete">
+              <button 
+                onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+                className="text-gray-400 hover:text-red-600" 
+                title="Delete"
+                aria-label="Delete appeal"
+              >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
               </button>
             )}
@@ -820,11 +882,14 @@ function ExpandableCard({
 }) {
   const dLeft = daysLeft(appeal);
   const eff = effectiveDeadline(appeal);
+  
+  // Disable dragging on mobile (touch devices)
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
   return (
     <div
-      draggable={!isArchived}
-      onDragStart={(e) => !isArchived && onDragStart(e, appeal.id)}
+      draggable={!isArchived && !isTouchDevice}
+      onDragStart={(e) => !isArchived && !isTouchDevice && onDragStart(e, appeal.id)}
       className={`group rounded-xl ${getBackgroundClass(appeal)} p-3 shadow hover:shadow-md border ${getBorderClass(appeal)} relative`}
     >
       {/* Collapse button */}
@@ -832,6 +897,7 @@ function ExpandableCard({
         onClick={onCollapse}
         className="absolute top-2 right-2 text-gray-400 hover:text-purple-600 transition z-10"
         title="Collapse"
+        aria-label="Collapse appeal details"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="m5 15 7-7 7 7" />
@@ -869,7 +935,7 @@ function ExpandableCard({
           {!isArchived && (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <select
-                className="text-xs sm:text-sm rounded-lg border px-2 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 max-w-[100px]"
+                className="text-xs sm:text-sm rounded-lg border px-2 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 max-w-[140px] sm:max-w-[160px]"
                 value={appeal.status}
                 onChange={(e) => {
                   const newStatus = e.target.value as AppealStatus;
@@ -980,7 +1046,7 @@ function AppealEditModal({
               </button>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="Close modal">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -1212,7 +1278,7 @@ function AppealForm({ onClose, onCreate }: { onClose: () => void; onCreate: (a: 
       <div className="w-full max-w-[95vw] sm:max-w-2xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col overflow-x-hidden">
         <div className="flex items-center justify-between border-b p-4 flex-shrink-0">
           <h3 className="text-lg font-semibold">New Appeal</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="Close modal">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
           </button>
         </div>
