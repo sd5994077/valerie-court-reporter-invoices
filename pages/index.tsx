@@ -3,9 +3,14 @@ import { getBranding } from '../src/config/branding';
 import { MobileNavigation } from '../src/components/MobileNavigation';
 import Link from 'next/link';
 
-export default function HomePage() {
+interface HomePageProps {
+  environment: string;
+}
+
+export default function HomePage({ environment }: HomePageProps) {
   const branding = getBranding();
-  const isProduction = process.env.VERCEL_ENV === 'production';
+  // VERCEL_ENV can be 'production', 'preview', or 'development'
+  const isProduction = environment === 'production';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -130,4 +135,13 @@ export default function HomePage() {
       </main>
     </div>
   );
+}
+
+export async function getStaticProps() {
+  return {
+    props: {
+      // Pass the VERCEL_ENV at build time to the component
+      environment: process.env.VERCEL_ENV || 'development',
+    },
+  };
 }
