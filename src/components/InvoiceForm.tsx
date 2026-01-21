@@ -871,7 +871,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       {/* Judge Name Confirmation Modal - REMOVED */}
 
         {/* Submit Button */}
-        <div className="flex justify-end">
+        <div className="flex justify-center sm:justify-end">
           <button
             type="submit"
             className="bg-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-purple-700 transition-colors duration-200 flex items-center space-x-2 text-lg"
