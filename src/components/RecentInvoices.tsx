@@ -314,7 +314,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-md hover:shadow-2xl transition-shadow">
+      <div className="bg-white rounded-lg shadow-md hover:shadow-2xl transition-shadow overflow-visible">
         <div className="bg-purple-700 text-white px-4 sm:px-6 py-4 rounded-t-lg">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center">
@@ -326,7 +326,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
           </div>
         </div>
 
-        <div className="p-4 sm:p-6">
+        <div className="p-4 sm:p-6 overflow-visible">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 space-y-3 sm:space-y-0">
             <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
               <p className="text-sm text-gray-600">Most recent invoice activity</p>
@@ -373,7 +373,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
           ) : sortedInvoices.length > 0 ? (
             <>
               {/* Mobile Card View (on small screens) */}
-              <div className="block sm:hidden space-y-4">
+              <div className="block sm:hidden space-y-4 overflow-visible">
                 {sortedInvoices.map((invoice, index) => (
                   <div key={invoice.id} className={`border rounded-lg p-4 ${index % 2 === 0 ? 'bg-white' : 'bg-purple-50'}`}>
                     <div className="flex justify-between items-start mb-3">
@@ -749,7 +749,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       {/* Click outside to close dropdown */}
       {openDropdown && (
         <div 
-          className="fixed inset-0 z-5" 
+          className="fixed inset-0 z-40" 
           onClick={() => setOpenDropdown(null)}
         ></div>
       )}

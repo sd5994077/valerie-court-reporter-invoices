@@ -126,7 +126,17 @@ export default function AppealsPage() {
   const [editing, setEditing] = useState<Appeal | null>(null);
   const [showAllArchived, setShowAllArchived] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [isMobile, setIsMobile] = useState(false);
   const draggingRef = useRef<string | null>(null);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     setAppeals(loadStore());
@@ -169,6 +179,29 @@ export default function AppealsPage() {
   }, [filteredAppeals]);
 
   const columns: AppealStatus[] = ['Intake', 'Active', 'Scope', 'Proofread', 'Awaiting Extension', 'Submitted', 'Completed', 'Archived'];
+
+  // Helper: Determine if cards in a column should be compact
+  // Mobile: compact if multiple cards, Desktop: compact if more than 5 cards
+  function shouldBeCompact(status: AppealStatus, count: number): boolean {
+    if (status === 'Completed' || status === 'Archived') return true; // Always compact for these
+    if (isMobile) {
+      return count > 1; // Mobile: compact if more than 1 card
+    }
+    return count > 5; // Desktop: compact if more than 5 cards
+  }
+
+  // Toggle card expansion
+  function toggleCardExpansion(id: string) {
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
 
   function exportToCSV() {
     const headers = [
@@ -243,6 +276,19 @@ export default function AppealsPage() {
         return next;
       })
     );
+  }
+
+  function handleStatusChange(id: string, newStatus: AppealStatus) {
+    // Confirm before archiving
+    if (newStatus === 'Archived') {
+      const confirmed = window.confirm(
+        'Archive this appeal?\n\nOnce archived, no further edits are allowed. The appeal will be read-only.'
+      );
+      if (!confirmed) {
+        return; // User cancelled
+      }
+    }
+    updateAppeal(id, { status: newStatus });
   }
 
   function deleteAppeal(id: string) {
@@ -379,34 +425,99 @@ export default function AppealsPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-6">
-          {columns.map((col) => (
-            <div
-              key={col}
-              onDragOver={onDragOver}
-              onDrop={(e) => onDrop(e, col)}
-              className="rounded-2xl bg-gray-100 p-3 md:p-4 shadow-inner min-h-[320px]"
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-700">{col}</h3>
-                <span className="text-xs text-gray-500">{filteredAppeals.filter((a) => a.status === col).length}</span>
-              </div>
-              <div className="space-y-3">
-                {(col === 'Archived' 
-                  ? filteredAppeals
-                      .filter((a) => a.status === col)
-                      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-                      .slice(0, showAllArchived ? undefined : 50)
-                  : filteredAppeals
-                      .filter((a) => a.status === col)
-                      .sort((a, b) => daysLeft(a) - daysLeft(b))
-                ).map((a) => (
-                    col === 'Completed' || col === 'Archived' ? (
-                      <CompactCard 
-                        key={a.id} 
-                        appeal={a} 
-                        onDelete={col === 'Archived' ? undefined : () => deleteAppeal(a.id)} 
-                        onEdit={col === 'Archived' ? () => setEditing(a) : () => setEditing(a)}
-                        isArchived={col === 'Archived'}
+          {columns.map((col) => {
+            const colCount = filteredAppeals.filter((a) => a.status === col).length;
+            const isEmptyMobile = isMobile && colCount === 0;
+            
+            // Show collapsed version on mobile when empty
+            if (isEmptyMobile) {
+              return (
+                <div
+                  key={col}
+                  className="rounded-xl bg-gray-50 border border-gray-200 p-3 flex items-center justify-between"
+                >
+                  <h3 className="font-medium text-gray-600 text-sm">{col}</h3>
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">0</span>
+                </div>
+              );
+            }
+            
+            return (
+              <div
+                key={col}
+                onDragOver={onDragOver}
+                onDrop={(e) => onDrop(e, col)}
+                className="rounded-2xl bg-gray-100 p-3 md:p-4 shadow-inner min-h-[320px]"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-700">{col}</h3>
+                  <span className="text-xs text-gray-500">{colCount}</span>
+                </div>
+                <div className="space-y-3">
+                {(() => {
+                  const colAppeals = col === 'Archived' 
+                    ? filteredAppeals
+                        .filter((a) => a.status === col)
+                        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                        .slice(0, showAllArchived ? undefined : 50)
+                    : filteredAppeals
+                        .filter((a) => a.status === col)
+                        .sort((a, b) => daysLeft(a) - daysLeft(b));
+                  
+                  const isCompactMode = shouldBeCompact(col, colAppeals.length);
+                  
+                  return colAppeals.map((a) => {
+                    const isExpanded = expandedCards.has(a.id);
+                    
+                    // Always compact for Completed/Archived (unless expanded)
+                    if (col === 'Completed' || col === 'Archived') {
+                      return isExpanded ? (
+                        <ExpandableCard
+                          key={a.id}
+                          appeal={a}
+                          onDragStart={onDragStart}
+                          onDelete={col === 'Archived' ? undefined : () => deleteAppeal(a.id)}
+                          onUpdate={(p) => updateAppeal(a.id, p)}
+                          onEdit={() => setEditing(a)}
+                          onCollapse={() => toggleCardExpansion(a.id)}
+                          isArchived={col === 'Archived'}
+                        />
+                      ) : (
+                        <CompactCard 
+                          key={a.id} 
+                          appeal={a} 
+                          onDelete={col === 'Archived' ? undefined : () => deleteAppeal(a.id)} 
+                          onEdit={() => setEditing(a)}
+                          onExpand={() => toggleCardExpansion(a.id)}
+                          isArchived={col === 'Archived'}
+                        />
+                      );
+                    }
+                    
+                    // For other statuses: use compact mode based on count
+                    if (isCompactMode && !isExpanded) {
+                      return (
+                        <CompactCard 
+                          key={a.id} 
+                          appeal={a} 
+                          onDelete={() => deleteAppeal(a.id)} 
+                          onEdit={() => setEditing(a)}
+                          onExpand={() => toggleCardExpansion(a.id)}
+                          showDeadline={true}
+                        />
+                      );
+                    }
+                    
+                    // Full card view
+                    return isCompactMode ? (
+                      <ExpandableCard
+                        key={a.id}
+                        appeal={a}
+                        onDragStart={onDragStart}
+                        onDelete={() => deleteAppeal(a.id)}
+                        onUpdate={(p) => updateAppeal(a.id, p)}
+                        onEdit={() => setEditing(a)}
+                        onCollapse={() => toggleCardExpansion(a.id)}
                       />
                     ) : (
                       <AppealCard
@@ -418,8 +529,9 @@ export default function AppealsPage() {
                         onUpdate={(p) => updateAppeal(a.id, p)}
                         onEdit={() => setEditing(a)}
                       />
-                    )
-                  ))}
+                    );
+                  });
+                })()}
                 {col === 'Archived' && filteredAppeals.filter((a) => a.status === col).length > 50 && (
                   <button
                     onClick={() => setShowAllArchived(!showAllArchived)}
@@ -431,14 +543,15 @@ export default function AppealsPage() {
                     }
                   </button>
                 )}
-                {filteredAppeals.filter((a) => a.status === col).length === 0 && (
-                  <div className="text-sm text-gray-500 py-6 text-center">
-                    {searchQuery ? 'No matches' : 'Drop appeals here'}
-                  </div>
-                )}
+                  {colCount === 0 && (
+                    <div className="text-sm text-gray-500 py-6 text-center">
+                      {searchQuery ? 'No matches' : 'Drop appeals here'}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </main>
 
@@ -577,7 +690,19 @@ function AppealCard({
           <select
             className="text-xs sm:text-sm rounded-lg border px-2 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 max-w-[100px]"
             value={appeal.status}
-            onChange={(e) => onUpdate({ status: e.target.value as AppealStatus })}
+            onChange={(e) => {
+              const newStatus = e.target.value as AppealStatus;
+              if (newStatus === 'Archived') {
+                const confirmed = window.confirm(
+                  'Archive this appeal?\n\nOnce archived, no further edits are allowed. The appeal will be read-only.'
+                );
+                if (!confirmed) {
+                  e.target.value = appeal.status; // Reset dropdown
+                  return;
+                }
+              }
+              onUpdate({ status: newStatus });
+            }}
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -589,28 +714,182 @@ function AppealCard({
   );
 }
 
-function CompactCard({ appeal, onDelete, onEdit, isArchived = false }: { appeal: Appeal; onDelete?: () => void; onEdit: () => void; isArchived?: boolean }) {
+function CompactCard({ 
+  appeal, 
+  onDelete, 
+  onEdit, 
+  onExpand,
+  isArchived = false,
+  showDeadline = false 
+}: { 
+  appeal: Appeal; 
+  onDelete?: () => void; 
+  onEdit: () => void; 
+  onExpand?: () => void;
+  isArchived?: boolean;
+  showDeadline?: boolean;
+}) {
+  const dLeft = daysLeft(appeal);
+  
+  // Urgency border color for visual scanning
+  const getUrgencyBorder = () => {
+    if (isArchived || appeal.status === 'Completed' || appeal.status === 'Archived') {
+      return 'border-l-gray-300';
+    }
+    if (appeal.extensions.length >= 3) return 'border-l-pink-400';
+    if (dLeft < 0 || dLeft <= 7) return 'border-l-red-500';
+    if (dLeft <= 15) return 'border-l-yellow-400';
+    return 'border-l-emerald-500';
+  };
+  
   return (
-    <div className="group rounded-xl bg-white p-3 shadow hover:shadow-md border border-gray-200">
+    <div 
+      className={`group rounded-xl bg-white p-3 shadow hover:shadow-md border border-gray-200 border-l-4 ${getUrgencyBorder()} cursor-pointer transition-all`}
+      onClick={onExpand}
+    >
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="font-medium text-gray-900 truncate">{appeal.style || 'Untitled Case'}</div>
-          <div className="text-xs text-gray-500 mt-0.5">
-            {appeal.completedAt ? `Completed: ${new Date(appeal.completedAt).toLocaleDateString()}` : `Updated: ${new Date(appeal.updatedAt).toLocaleDateString()}`}
+          <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+            {showDeadline ? (
+              <>
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                  dLeft < 0 ? 'bg-red-100 text-red-700' :
+                  dLeft <= 7 ? 'bg-red-100 text-red-700' :
+                  dLeft <= 15 ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {dLeft < 0 ? `${Math.abs(dLeft)}d overdue` : `${dLeft}d left`}
+                </span>
+                <span className="text-gray-400">•</span>
+                <span>Ext: {appeal.extensions.length}/3</span>
+              </>
+            ) : (
+              appeal.completedAt ? `Completed: ${new Date(appeal.completedAt).toLocaleDateString()}` : `Updated: ${new Date(appeal.updatedAt).toLocaleDateString()}`
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
-          <button onClick={onEdit} className="text-gray-400 hover:text-purple-600" title={isArchived ? "View (Read-only)" : "Edit"}>
-            {isArchived ? (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1-.518 1.006L7 15v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-5l4.964-1.672a1.012 1.012 0 0 1 .518-1.006L21 11.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v5.5z"/></svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487 19.5 7.125m-2.638-2.638L8.25 13.098V15.75h2.652l8.612-8.612m-2.638-2.651a1.875 1.875 0 1 1 2.652 2.652M7.5 19.5h9"/></svg>
-            )}
-          </button>
-          {!isArchived && onDelete && (
-            <button onClick={onDelete} className="text-gray-400 hover:text-red-600" title="Delete">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+        <div className="flex items-center gap-2">
+          {onExpand && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onExpand(); }} 
+              className="text-gray-400 hover:text-purple-600 transition" 
+              title="Expand"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m19 9-7 7-7-7" />
+              </svg>
             </button>
+          )}
+          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
+            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="text-gray-400 hover:text-purple-600" title={isArchived ? "View (Read-only)" : "Edit"}>
+              {isArchived ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1-.518 1.006L7 15v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-5l4.964-1.672a1.012 1.012 0 0 1 .518-1.006L21 11.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v5.5z"/></svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487 19.5 7.125m-2.638-2.638L8.25 13.098V15.75h2.652l8.612-8.612m-2.638-2.651a1.875 1.875 0 1 1 2.652 2.652M7.5 19.5h9"/></svg>
+              )}
+            </button>
+            {!isArchived && onDelete && (
+              <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-gray-400 hover:text-red-600" title="Delete">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExpandableCard({
+  appeal,
+  onDragStart,
+  onDelete,
+  onUpdate,
+  onEdit,
+  onCollapse,
+  isArchived = false,
+}: {
+  appeal: Appeal;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onDelete?: () => void;
+  onUpdate: (patch: Partial<Appeal>) => void;
+  onEdit: () => void;
+  onCollapse: () => void;
+  isArchived?: boolean;
+}) {
+  const dLeft = daysLeft(appeal);
+  const eff = effectiveDeadline(appeal);
+
+  return (
+    <div
+      draggable={!isArchived}
+      onDragStart={(e) => !isArchived && onDragStart(e, appeal.id)}
+      className={`group rounded-xl ${getBackgroundClass(appeal)} p-3 shadow hover:shadow-md border ${getBorderClass(appeal)} relative`}
+    >
+      {/* Collapse button */}
+      <button 
+        onClick={onCollapse}
+        className="absolute top-2 right-2 text-gray-400 hover:text-purple-600 transition z-10"
+        title="Collapse"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m5 15 7-7 7 7" />
+        </svg>
+      </button>
+      
+      <div className="cursor-pointer" onClick={onEdit}>
+        <div className="flex items-start justify-between gap-3 mb-2 pr-6">
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-gray-900 leading-tight mb-1">{appeal.style || 'Untitled Case'}</div>
+            <div className="text-xs text-gray-500 truncate">
+              <span className="font-medium text-gray-600">COA:</span> {appeal.courtOfAppealsNumber || '—'} 
+              <span className="mx-1.5 text-gray-300">|</span> 
+              <span className="font-medium text-gray-600">Trial:</span> {appeal.trialCourtCaseNumber || '—'}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center gap-2">
+            {dLeft < 0 ? (
+              <Badge tone="red">Past due {Math.abs(dLeft)}d</Badge>
+            ) : dLeft <= 7 ? (
+              <Badge tone="red">{dLeft}d left</Badge>
+            ) : dLeft <= 15 ? (
+              <Badge tone="yellow">{dLeft}d left</Badge>
+            ) : (
+              <Badge tone="green">{dLeft}d left</Badge>
+            )}
+            <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200" title="Extensions Used">
+              Ext: {appeal.extensions.length}/3
+            </span>
+          </div>
+
+          {!isArchived && (
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <select
+                className="text-xs sm:text-sm rounded-lg border px-2 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 max-w-[100px]"
+                value={appeal.status}
+                onChange={(e) => {
+                  const newStatus = e.target.value as AppealStatus;
+                  if (newStatus === 'Archived') {
+                    const confirmed = window.confirm(
+                      'Archive this appeal?\n\nOnce archived, no further edits are allowed. The appeal will be read-only.'
+                    );
+                    if (!confirmed) {
+                      e.target.value = appeal.status; // Reset dropdown
+                      return;
+                    }
+                  }
+                  onUpdate({ status: newStatus });
+                }}
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
       </div>
@@ -637,6 +916,10 @@ function AppealEditModal({
   onUpdateExtension: (extId: string, days: number) => void;
   onUpdateExtensionDate: (extId: string, date: string) => void;
 }) {
+  // View-first mode: starts in view mode, click Edit to enable editing
+  const [isEditing, setIsEditing] = useState(false);
+  const canEdit = !isReadOnly && isEditing;
+  
   const [form, setForm] = useState({
     requesterName: appeal.requesterName,
     requesterEmail: appeal.requesterEmail || '',
@@ -649,6 +932,10 @@ function AppealEditModal({
     status: appeal.status as AppealStatus,
     notes: appeal.notes || '',
   });
+
+  // Calculate effective deadline for display
+  const dLeft = daysLeft(appeal);
+  const effDeadline = effectiveDeadline(appeal);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -667,33 +954,90 @@ function AppealEditModal({
     return { base, steps, final: current };
   }
 
+  // Get title based on mode
+  const getTitle = () => {
+    if (isReadOnly) return 'View Appeal (Archived)';
+    if (isEditing) return 'Edit Appeal';
+    return 'Appeal Details';
+  };
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-[95vw] sm:max-w-3xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col overflow-x-hidden">
         <div className="flex items-center justify-between border-b p-4 flex-shrink-0">
-          <h3 className="text-lg font-semibold">{isReadOnly ? 'View Appeal (Archived)' : 'Edit Appeal'}</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold">{getTitle()}</h3>
+            {!isReadOnly && !isEditing && (
+              <button 
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487 19.5 7.125m-2.638-2.638L8.25 13.098V15.75h2.652l8.612-8.612m-2.638-2.651a1.875 1.875 0 1 1 2.652 2.652M7.5 19.5h9"/>
+                </svg>
+                Edit
+              </button>
+            )}
+          </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
           </button>
         </div>
+        
+        {/* Quick info bar when in view mode */}
+        {!isEditing && !isReadOnly && (
+          <div className="px-4 py-3 bg-gray-50 border-b flex flex-wrap items-center gap-3 text-sm">
+            <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium ${
+              dLeft < 0 ? 'bg-red-100 text-red-700' :
+              dLeft <= 7 ? 'bg-red-100 text-red-700' :
+              dLeft <= 15 ? 'bg-yellow-100 text-yellow-700' :
+              'bg-emerald-100 text-emerald-700'
+            }`}>
+              {dLeft < 0 ? `${Math.abs(dLeft)} days overdue` : `${dLeft} days remaining`}
+            </div>
+            <span className="text-gray-400">•</span>
+            <span className="text-gray-600">Due: <strong>{effDeadline.toLocaleDateString()}</strong></span>
+            <span className="text-gray-400">•</span>
+            <span className="text-gray-600">Extensions: <strong>{appeal.extensions.length}/3</strong></span>
+            <span className="text-gray-400">•</span>
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+              appeal.status === 'Completed' ? 'bg-green-100 text-green-700' :
+              appeal.status === 'Archived' ? 'bg-gray-100 text-gray-600' :
+              'bg-purple-100 text-purple-700'
+            }`}>{appeal.status}</span>
+          </div>
+        )}
+        
         <form onSubmit={submit} className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto">
-          <TextField label="Requester Name" value={form.requesterName} onChange={(v) => setForm({ ...form, requesterName: v })} disabled={isReadOnly} />
-          <TextField label="Requester Email" value={form.requesterEmail} onChange={(v) => setForm({ ...form, requesterEmail: v })} disabled={isReadOnly} />
-          <TextField label="Requester Phone" value={form.requesterPhone} onChange={(v) => setForm({ ...form, requesterPhone: v })} disabled={isReadOnly} />
-          <TextField label="Requester Address" value={form.requesterAddress} onChange={(v) => setForm({ ...form, requesterAddress: v })} disabled={isReadOnly} />
-          <TextField label="Court of Appeals Number" value={form.courtOfAppealsNumber} onChange={(v) => setForm({ ...form, courtOfAppealsNumber: v })} disabled={isReadOnly} />
-          <TextField label="Trial Court Case Number" value={form.trialCourtCaseNumber} onChange={(v) => setForm({ ...form, trialCourtCaseNumber: v })} disabled={isReadOnly} />
-          <TextField label="Style (e.g., First Last vs The State of Texas)" value={form.style} onChange={(v) => setForm({ ...form, style: v })} className="sm:col-span-2" disabled={isReadOnly} />
-          <DateField label="Appeal Deadline" value={form.appealDeadline} onChange={(v) => setForm({ ...form, appealDeadline: v })} disabled={isReadOnly} />
+          <TextField label="Requester Name" value={form.requesterName} onChange={(v) => setForm({ ...form, requesterName: v })} disabled={!canEdit} />
+          <TextField label="Requester Email" type="email" value={form.requesterEmail} onChange={(v) => setForm({ ...form, requesterEmail: v })} disabled={!canEdit} />
+          <TextField label="Requester Phone" type="tel" value={form.requesterPhone} onChange={(v) => setForm({ ...form, requesterPhone: v })} disabled={!canEdit} />
+          <TextField label="Requester Address" value={form.requesterAddress} onChange={(v) => setForm({ ...form, requesterAddress: v })} disabled={!canEdit} />
+          <TextField label="Court of Appeals Number" value={form.courtOfAppealsNumber} onChange={(v) => setForm({ ...form, courtOfAppealsNumber: v })} disabled={!canEdit} />
+          <TextField label="Trial Court Case Number" value={form.trialCourtCaseNumber} onChange={(v) => setForm({ ...form, trialCourtCaseNumber: v })} disabled={!canEdit} />
+          <TextField label="Style (e.g., First Last vs The State of Texas)" value={form.style} onChange={(v) => setForm({ ...form, style: v })} className="sm:col-span-2" disabled={!canEdit} />
+          <DateField label="Appeal Deadline" value={form.appealDeadline} onChange={(v) => setForm({ ...form, appealDeadline: v })} disabled={!canEdit} />
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select 
-              className={`w-full rounded-lg border px-3 py-2 ${isReadOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              className={`w-full rounded-lg border px-3 py-2 ${!canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               value={form.status} 
-              onChange={(e) => setForm({ ...form, status: e.target.value as AppealStatus })}
-              disabled={isReadOnly}
+              onChange={(e) => {
+                const newStatus = e.target.value as AppealStatus;
+                if (canEdit && newStatus === 'Archived') {
+                  const confirmed = window.confirm(
+                    'Archive this appeal?\n\nOnce archived, no further edits are allowed. The appeal will be read-only.'
+                  );
+                  if (!confirmed) {
+                    return; // Don't update form state
+                  }
+                }
+                setForm({ ...form, status: newStatus });
+              }}
+              disabled={!canEdit}
             >
-              {isReadOnly ? (
+              {!canEdit ? (
                 <option value={form.status}>{form.status}</option>
               ) : (
                 STATUS_OPTIONS.map((s) => (
@@ -705,18 +1049,18 @@ function AppealEditModal({
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea 
-              className={`w-full rounded-lg border px-3 py-2 ${isReadOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              className={`w-full rounded-lg border px-3 py-2 ${!canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               rows={4} 
               value={form.notes} 
               onChange={(e) => setForm({ ...form, notes: e.target.value })} 
-              disabled={isReadOnly}
+              disabled={!canEdit}
             />
           </div>
 
           <div className="sm:col-span-2 border-t pt-4">
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-semibold text-gray-800">Extensions</h4>
-              {!isReadOnly && (
+              {canEdit && (
                 <div className="flex gap-2 items-center">
                   <select 
                     className="rounded-lg border px-2 py-1.5 text-xs font-medium bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -743,58 +1087,99 @@ function AppealEditModal({
             )}
             <div className="space-y-2">
               {appeal.extensions.map((ext) => (
-                <div key={ext.id} className="flex items-center gap-3 text-sm">
-                  <input
-                    type="date"
-                    className="w-40 rounded-lg border px-2 py-1"
-                    value={ext.requestedOn ? ext.requestedOn.split('T')[0] : ''}
-                    onChange={(e) => onUpdateExtensionDate(ext.id, e.target.value ? new Date(e.target.value).toISOString() : '')}
-                    disabled={isReadOnly}
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    className="w-24 rounded-lg border px-2 py-1"
-                    value={ext.daysGranted}
-                    onChange={(e) => onUpdateExtension(ext.id, Number(e.target.value) || 0)}
-                    disabled={isReadOnly}
-                  />
-                  <span className="text-gray-500">days</span>
-                  {!isReadOnly && (
-                    <button type="button" onClick={() => onRemoveExtension(ext.id)} className="ml-auto text-xs text-red-600 hover:underline">Remove</button>
+                <div key={ext.id} className="flex flex-wrap items-center gap-3 text-sm">
+                  {canEdit ? (
+                    <>
+                      <input
+                        type="date"
+                        className="w-40 rounded-lg border px-2 py-1"
+                        value={ext.requestedOn ? ext.requestedOn.split('T')[0] : ''}
+                        onChange={(e) => onUpdateExtensionDate(ext.id, e.target.value ? new Date(e.target.value).toISOString() : '')}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        className="w-24 rounded-lg border px-2 py-1"
+                        value={ext.daysGranted}
+                        onChange={(e) => onUpdateExtension(ext.id, Number(e.target.value) || 0)}
+                      />
+                      <span className="text-gray-500">days</span>
+                      <button type="button" onClick={() => onRemoveExtension(ext.id)} className="ml-auto text-xs text-red-600 hover:underline">Remove</button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-gray-600">{ext.requestedOn ? new Date(ext.requestedOn).toLocaleDateString() : '—'}</span>
+                      <span className="text-gray-400">→</span>
+                      <span className="font-medium text-gray-900">+{ext.daysGranted} days</span>
+                    </>
                   )}
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-2">
-            {!isReadOnly && (
-              <>
-                <a 
-                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Appeal Deadline: ${form.style || 'Untitled'}`)}&dates=${(() => {
-                    const base = parseISO(form.appealDeadline);
-                    const totalExt = appeal.extensions.reduce((n, e) => n + (e.daysGranted || 0), 0);
-                    const eff = addDays(base, totalExt);
-                    const y = eff.getFullYear();
-                    const m = String(eff.getMonth() + 1).padStart(2, '0');
-                    const d = String(eff.getDate()).padStart(2, '0');
-                    return `${y}${m}${d}/${y}${m}${d}`;
-                  })()}&details=${encodeURIComponent(`Court of Appeals #: ${form.courtOfAppealsNumber || 'N/A'}\nTrial Court Case #: ${form.trialCourtCaseNumber || 'N/A'}\nRequester: ${form.requesterName || 'N/A'}\nNotes: ${form.notes || ''}`)}`}
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="rounded-lg border px-4 py-2 font-medium hover:bg-gray-50 flex items-center gap-2"
+          <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 pt-4 border-t mt-2">
+            {/* Left side: Calendar actions - always available */}
+            <div className="flex items-center gap-2">
+              <a 
+                href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Appeal Deadline: ${form.style || 'Untitled'}`)}&dates=${(() => {
+                  const base = parseISO(form.appealDeadline);
+                  const totalExt = appeal.extensions.reduce((n, e) => n + (e.daysGranted || 0), 0);
+                  const eff = addDays(base, totalExt);
+                  const y = eff.getFullYear();
+                  const m = String(eff.getMonth() + 1).padStart(2, '0');
+                  const d = String(eff.getDate()).padStart(2, '0');
+                  return `${y}${m}${d}/${y}${m}${d}`;
+                })()}&details=${encodeURIComponent(`Court of Appeals #: ${form.courtOfAppealsNumber || 'N/A'}\nTrial Court Case #: ${form.trialCourtCaseNumber || 'N/A'}\nRequester: ${form.requesterName || 'N/A'}\nNotes: ${form.notes || ''}`)}`}
+                target="_blank" 
+                rel="noreferrer"
+                className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-gray-50 flex items-center gap-2 bg-white"
+              >
+                <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5v-5z"/></svg>
+                <span className="hidden sm:inline">Google Cal</span>
+                <span className="sm:hidden">Add to Cal</span>
+              </a>
+              <a 
+                href="/api/calendar/appeals.ics" 
+                className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-gray-50 bg-white hidden sm:flex items-center gap-1" 
+                target="_blank" 
+                rel="noreferrer"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                ICS
+              </a>
+            </div>
+            
+            {/* Right side: Form actions */}
+            <div className="flex items-center gap-2">
+              {isEditing ? (
+                <>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsEditing(false)} 
+                    className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="rounded-lg bg-purple-600 text-white px-3 py-2 text-sm font-semibold hover:bg-purple-700"
+                  >
+                    Save Changes
+                  </button>
+                </>
+              ) : (
+                <button 
+                  type="button" 
+                  onClick={onClose} 
+                  className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-gray-50"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5v-5z"/></svg>
-                  Google Cal
-                </a>
-                <a href="/api/calendar/appeals.ics" className="rounded-lg border px-4 py-2 font-medium hover:bg-gray-50" target="_blank" rel="noreferrer">ICS</a>
-              </>
-            )}
-            <button type="button" onClick={onClose} className="rounded-lg border px-4 py-2 font-medium hover:bg-gray-50">{isReadOnly ? 'Close' : 'Cancel'}</button>
-            {!isReadOnly && (
-              <button type="submit" className="rounded-lg bg-purple-600 text-white px-4 py-2 font-semibold hover:bg-purple-700">Save</button>
-            )}
+                  Close
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>
@@ -824,7 +1209,7 @@ function AppealForm({ onClose, onCreate }: { onClose: () => void; onCreate: (a: 
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-[95vw] sm:max-w-2xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col overflow-x-hidden">
         <div className="flex items-center justify-between border-b p-4 flex-shrink-0">
           <h3 className="text-lg font-semibold">New Appeal</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -833,8 +1218,8 @@ function AppealForm({ onClose, onCreate }: { onClose: () => void; onCreate: (a: 
         </div>
         <form onSubmit={submit} className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto">
           <TextField label="Requester Name" value={form.requesterName} onChange={(v) => setForm({ ...form, requesterName: v })} />
-          <TextField label="Requester Email" value={form.requesterEmail} onChange={(v) => setForm({ ...form, requesterEmail: v })} />
-          <TextField label="Requester Phone" value={form.requesterPhone} onChange={(v) => setForm({ ...form, requesterPhone: v })} />
+          <TextField label="Requester Email" type="email" value={form.requesterEmail} onChange={(v) => setForm({ ...form, requesterEmail: v })} />
+          <TextField label="Requester Phone" type="tel" value={form.requesterPhone} onChange={(v) => setForm({ ...form, requesterPhone: v })} />
           <TextField label="Requester Address" value={form.requesterAddress} onChange={(v) => setForm({ ...form, requesterAddress: v })} />
           <TextField label="Court of Appeals Number" value={form.courtOfAppealsNumber} onChange={(v) => setForm({ ...form, courtOfAppealsNumber: v })} />
           <TextField label="Trial Court Case Number" value={form.trialCourtCaseNumber} onChange={(v) => setForm({ ...form, trialCourtCaseNumber: v })} />
@@ -862,11 +1247,17 @@ function AppealForm({ onClose, onCreate }: { onClose: () => void; onCreate: (a: 
   );
 }
 
-function TextField({ label, value, onChange, className, disabled }: { label: string; value: string; onChange: (v: string) => void; className?: string; disabled?: boolean }) {
+function TextField({ label, value, onChange, className, disabled, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; className?: string; disabled?: boolean; type?: 'text' | 'email' | 'tel' }) {
   return (
-    <div className={className}>
+    <div className={`min-w-0 ${className || ''}`}>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input className={`w-full rounded-lg border px-3 py-2 ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
+      <input 
+        type={type}
+        className={`w-full max-w-full rounded-lg border px-3 py-2 ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`} 
+        value={value} 
+        onChange={(e) => onChange(e.target.value)} 
+        disabled={disabled}
+      />
     </div>
   );
 }
