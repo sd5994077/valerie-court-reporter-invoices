@@ -436,7 +436,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
 
 
                               {openDropdown === invoice.id && (
-                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 -translate-x-28 sm:translate-x-0">
                                   <div className="py-1">
                                 <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
                                   Invoice Actions
