@@ -3,17 +3,8 @@ import { getBranding } from '../src/config/branding';
 import { MobileNavigation } from '../src/components/MobileNavigation';
 import { RevenueByCounty } from '../src/components/RevenueByCounty';
 import { RecentInvoices } from '../src/components/RecentInvoices';
+import { formatCurrency } from '../src/utils/formatters';
 import Link from 'next/link';
-
-// Currency formatting utility
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
-};
 
 interface DashboardStats {
   totalRevenue: number;

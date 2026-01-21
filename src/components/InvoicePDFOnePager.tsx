@@ -1,8 +1,6 @@
 import React from 'react';
 import type { InvoiceFormData } from '../types/invoice';
-
-const money = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+import { formatCurrency, formatDate } from '../utils/formatters';
 
 export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormData }) {
   const items = invoiceData.lineItems.map(it => ({
@@ -117,14 +115,14 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
                 <td style={{ padding: cellPad, verticalAlign: 'top', textAlign: 'left', wordBreak: 'break-word', whiteSpace: 'pre-line', fontSize: 11.5 }}>{it.description}</td>
                 <td style={{ padding: cellPad, verticalAlign: 'top', fontSize: 11.5 }}>{invoiceData.lineItems[i]?.notes || ''}</td>
                 <td style={{ padding: cellPad, verticalAlign: 'top', fontSize: 11.5 }}>{invoiceData.customFields?.dateOfHearing ? formatDate(invoiceData.customFields.dateOfHearing) : ''}</td>
-                <td style={{ padding: cellPad, verticalAlign: 'top', textAlign: 'right', fontWeight: 700, fontSize: 11.5 }}>{money(it.total)}</td>
+                <td style={{ padding: cellPad, verticalAlign: 'top', textAlign: 'right', fontWeight: 700, fontSize: 11.5 }}>{formatCurrency(it.total)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
               <td colSpan={3} style={{ padding: cellPad, textAlign: 'right', fontWeight: 700, borderTop: '1px solid #e5e7eb', fontSize: 12 }}>Total:</td>
-              <td style={{ padding: cellPad, textAlign: 'right', fontWeight: 800, borderTop: '1px solid #e5e7eb', color: '#000', fontSize: 12 }}>{money(subtotal)}</td>
+              <td style={{ padding: cellPad, textAlign: 'right', fontWeight: 800, borderTop: '1px solid #e5e7eb', color: '#000', fontSize: 12 }}>{formatCurrency(subtotal)}</td>
             </tr>
           </tfoot>
         </table>

@@ -1,4 +1,3 @@
-// InvoiceReview Component - Updated Icons v2.0 - 2024-12-19 23:45
 import React, { useState } from 'react';
 import type { InvoiceFormData } from '../types/invoice';
 import { SignatureImage } from './SignatureImage';
@@ -7,25 +6,7 @@ import { Toast } from './Toast';
 import { useRouter } from 'next/router';
 import { getBranding } from '../config/branding';
 import { generatePDF, isProbablyIOS } from '../utils/pdfGenerator';
-
-// Currency formatting utility
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
-};
-
-// Date formatting utility
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-};
+import { formatCurrency, formatDate } from '../utils/formatters';
 
 interface InvoiceReviewProps {
   invoiceData: InvoiceFormData;

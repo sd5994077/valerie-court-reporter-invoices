@@ -2,26 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { Toast } from './Toast';
 import { generatePDF as generatePDFUtil } from '../utils/pdfGenerator';
+import { formatCurrency, formatDate } from '../utils/formatters';
 import type { InvoiceFormData } from '../types/invoice';
-
-// Currency formatting utility
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
-};
-
-// Date formatting utility
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-};
 
 interface Invoice {
   id: string;

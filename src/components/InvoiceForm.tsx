@@ -1,19 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { InvoiceFormData } from '../types/invoice';
-// Currency formatting utility
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
-};
-
-// Fix floating point precision for money calculations
-const roundToTwoDecimals = (num: number) => {
-  return Math.round((num + Number.EPSILON) * 100) / 100;
-};
+import { formatCurrency, roundToTwoDecimals } from '../utils/formatters';
 
 interface InvoiceFormProps {
   onSubmit: (data: InvoiceFormData) => Promise<void>;
@@ -22,13 +9,6 @@ interface InvoiceFormProps {
 }
 
 export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps) {
-  // Client Information - COMMENTED OUT (no longer needed per requirements)
-  // const [clientName, setClientName] = useState('');
-  // const [company, setCompany] = useState('');
-  // const [phone, setPhone] = useState('');
-  // const [email, setEmail] = useState('');
-  // const [address, setAddress] = useState('');
-
   // Invoice Details
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [county, setCounty] = useState('');
@@ -115,9 +95,6 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
 
   // Invoice-level Comments (optional)
   const [comments, setComments] = useState('');
-  
-  // Judge confirmation modal - REMOVED/REPLACED by new dropdown logic
-  // const [showJudgeModal, setShowJudgeModal] = useState(false);
 
   const counties = [
     'Caldwell County',
@@ -125,16 +102,6 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
     'Hays County',
     'Other'
   ];
-
-  // Phone number formatting - REMOVED (no longer needed without client info)
-  // const formatPhoneNumber = (value: string) => { ... };
-
-  // const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => { ... };
-
-  // Email validation
-  const isValidEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
 
   const addLineItem = () => {
     setLineItems([...lineItems, {

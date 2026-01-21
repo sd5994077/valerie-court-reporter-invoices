@@ -1,25 +1,7 @@
 import React from 'react';
 import type { InvoiceFormData } from '../types/invoice';
 import { SignatureImage } from './SignatureImage';
-
-// Currency formatting utility
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
-};
-
-// Date formatting utility
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-};
+import { formatCurrency, formatDate } from '../utils/formatters';
 
 interface InvoicePDFProps {
   invoiceData: InvoiceFormData;
