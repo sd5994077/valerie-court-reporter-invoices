@@ -302,9 +302,16 @@ export default function AppealsPage() {
         if (a.id !== id) return a;
         const now = new Date().toISOString();
         const next: Appeal = { ...a, ...patch, updatedAt: now };
+        
+        // Handle status changes
         if (patch.status && patch.status !== a.status) {
+          // When moving TO Completed, set completedAt timestamp
           if (patch.status === 'Completed' && !a.completedAt) {
             next.completedAt = now;
+          }
+          // When moving AWAY FROM Completed, clear completedAt (back to active status)
+          else if (a.status === 'Completed' && patch.status !== 'Completed' && patch.status !== 'Archived') {
+            next.completedAt = undefined;
           }
         }
         return next;
@@ -703,6 +710,30 @@ function AppealCard({
   // Disable dragging on mobile (touch devices)
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
   
+  // Helper to render deadline badge based on status
+  const renderDeadlineBadge = () => {
+    // If completed or archived, show status instead of days
+    if (appeal.status === 'Completed') {
+      return <Badge tone="green">Completed</Badge>;
+    }
+    if (appeal.status === 'Archived') {
+      return <Badge tone="default">Archived</Badge>;
+    }
+    
+    // For active statuses, show days left
+    if (dLeft < 0) {
+      return <Badge tone="red">Past due {Math.abs(dLeft)}d</Badge>;
+    } else if (dLeft === 0) {
+      return <Badge tone="red">Due today</Badge>;
+    } else if (dLeft <= 7) {
+      return <Badge tone="red">{dLeft}d left</Badge>;
+    } else if (dLeft <= 15) {
+      return <Badge tone="yellow">{dLeft}d left</Badge>;
+    } else {
+      return <Badge tone="green">{dLeft}d left</Badge>;
+    }
+  };
+  
   return (
     <div
       draggable={!isTouchDevice}
@@ -723,15 +754,7 @@ function AppealCard({
 
       <div className="flex items-center justify-between mt-3">
         <div className="flex items-center gap-2">
-           {dLeft < 0 ? (
-            <Badge tone="red">Past due {Math.abs(dLeft)}d</Badge>
-          ) : dLeft <= 7 ? (
-            <Badge tone="red">{dLeft}d left</Badge>
-          ) : dLeft <= 15 ? (
-            <Badge tone="yellow">{dLeft}d left</Badge>
-          ) : (
-            <Badge tone="green">{dLeft}d left</Badge>
-          )}
+          {renderDeadlineBadge()}
           <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200" title="Extensions Used">
             Ext: {appeal.extensions.length}/3
           </span>
@@ -793,6 +816,58 @@ function CompactCard({
     return 'border-l-emerald-500';
   };
   
+  // Helper to render deadline badge
+  const renderDeadlineBadge = () => {
+    // If completed or archived, show status
+    if (appeal.status === 'Completed') {
+      return (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+          Completed
+        </span>
+      );
+    }
+    if (appeal.status === 'Archived') {
+      return (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+          Archived
+        </span>
+      );
+    }
+    
+    // For active statuses, show days left
+    if (dLeft < 0) {
+      return (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+          {Math.abs(dLeft)}d overdue
+        </span>
+      );
+    } else if (dLeft === 0) {
+      return (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+          Due today
+        </span>
+      );
+    } else if (dLeft <= 7) {
+      return (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+          {dLeft}d left
+        </span>
+      );
+    } else if (dLeft <= 15) {
+      return (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
+          {dLeft}d left
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">
+          {dLeft}d left
+        </span>
+      );
+    }
+  };
+  
   return (
     <div 
       className={`group rounded-xl bg-white p-3 shadow hover:shadow-md border border-gray-200 border-l-4 ${getUrgencyBorder()} cursor-pointer transition-all`}
@@ -804,14 +879,7 @@ function CompactCard({
           <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
             {showDeadline ? (
               <>
-                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                  dLeft < 0 ? 'bg-red-100 text-red-700' :
-                  dLeft <= 7 ? 'bg-red-100 text-red-700' :
-                  dLeft <= 15 ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-emerald-100 text-emerald-700'
-                }`}>
-                  {dLeft < 0 ? `${Math.abs(dLeft)}d overdue` : `${dLeft}d left`}
-                </span>
+                {renderDeadlineBadge()}
                 <span className="text-gray-400">•</span>
                 <span>Ext: {appeal.extensions.length}/3</span>
               </>
@@ -886,6 +954,30 @@ function ExpandableCard({
   // Disable dragging on mobile (touch devices)
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
+  // Helper to render deadline badge based on status
+  const renderDeadlineBadge = () => {
+    // If completed or archived, show status instead of days
+    if (appeal.status === 'Completed') {
+      return <Badge tone="green">Completed</Badge>;
+    }
+    if (appeal.status === 'Archived') {
+      return <Badge tone="default">Archived</Badge>;
+    }
+    
+    // For active statuses, show days left
+    if (dLeft < 0) {
+      return <Badge tone="red">Past due {Math.abs(dLeft)}d</Badge>;
+    } else if (dLeft === 0) {
+      return <Badge tone="red">Due today</Badge>;
+    } else if (dLeft <= 7) {
+      return <Badge tone="red">{dLeft}d left</Badge>;
+    } else if (dLeft <= 15) {
+      return <Badge tone="yellow">{dLeft}d left</Badge>;
+    } else {
+      return <Badge tone="green">{dLeft}d left</Badge>;
+    }
+  };
+
   return (
     <div
       draggable={!isArchived && !isTouchDevice}
@@ -918,15 +1010,7 @@ function ExpandableCard({
 
         <div className="flex items-center justify-between mt-3">
           <div className="flex items-center gap-2">
-            {dLeft < 0 ? (
-              <Badge tone="red">Past due {Math.abs(dLeft)}d</Badge>
-            ) : dLeft <= 7 ? (
-              <Badge tone="red">{dLeft}d left</Badge>
-            ) : dLeft <= 15 ? (
-              <Badge tone="yellow">{dLeft}d left</Badge>
-            ) : (
-              <Badge tone="green">{dLeft}d left</Badge>
-            )}
+            {renderDeadlineBadge()}
             <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200" title="Extensions Used">
               Ext: {appeal.extensions.length}/3
             </span>
@@ -1067,24 +1151,44 @@ function AppealEditModal({
         {/* Quick info bar when in view mode */}
         {!isEditing && !isReadOnly && (
           <div className="px-4 py-3 bg-gray-50 border-b flex flex-wrap items-center gap-3 text-sm">
-            <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium ${
-              dLeft < 0 ? 'bg-red-100 text-red-700' :
-              dLeft <= 7 ? 'bg-red-100 text-red-700' :
-              dLeft <= 15 ? 'bg-yellow-100 text-yellow-700' :
-              'bg-emerald-100 text-emerald-700'
-            }`}>
-              {dLeft < 0 ? `${Math.abs(dLeft)} days overdue` : `${dLeft} days remaining`}
-            </div>
-            <span className="text-gray-400">•</span>
-            <span className="text-gray-600">Due: <strong>{effDeadline.toLocaleDateString()}</strong></span>
-            <span className="text-gray-400">•</span>
-            <span className="text-gray-600">Extensions: <strong>{appeal.extensions.length}/3</strong></span>
-            <span className="text-gray-400">•</span>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-              appeal.status === 'Completed' ? 'bg-green-100 text-green-700' :
-              appeal.status === 'Archived' ? 'bg-gray-100 text-gray-600' :
-              'bg-purple-100 text-purple-700'
-            }`}>{appeal.status}</span>
+            {/* Show deadline info for active appeals, status info for completed/archived */}
+            {appeal.status === 'Completed' || appeal.status === 'Archived' ? (
+              <>
+                <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium ${
+                  appeal.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {appeal.status}
+                </div>
+                {appeal.completedAt && (
+                  <>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-600">{appeal.status === 'Completed' ? 'Completed' : 'Archived'} on: <strong>{new Date(appeal.completedAt).toLocaleDateString()}</strong></span>
+                  </>
+                )}
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-600">Original deadline: <strong>{effDeadline.toLocaleDateString()}</strong></span>
+              </>
+            ) : (
+              <>
+                <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium ${
+                  dLeft < 0 ? 'bg-red-100 text-red-700' :
+                  dLeft === 0 ? 'bg-red-100 text-red-700' :
+                  dLeft <= 7 ? 'bg-red-100 text-red-700' :
+                  dLeft <= 15 ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {dLeft < 0 ? `${Math.abs(dLeft)} days overdue` : dLeft === 0 ? 'Due today' : `${dLeft} days remaining`}
+                </div>
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-600">Due: <strong>{effDeadline.toLocaleDateString()}</strong></span>
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-600">Extensions: <strong>{appeal.extensions.length}/3</strong></span>
+                <span className="text-gray-400">•</span>
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  'bg-purple-100 text-purple-700'
+                }`}>{appeal.status}</span>
+              </>
+            )}
           </div>
         )}
         
