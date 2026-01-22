@@ -14,7 +14,7 @@ interface InvoiceReviewProps {
 
 interface FinalizedInvoice extends InvoiceFormData {
   id: string;
-  status: 'finalized';
+  status: 'pending' | 'completed' | 'overdue' | 'closed';
   finalizedAt: string;
   pdfGenerated: boolean;
 }
@@ -43,10 +43,11 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
     
     try {
       // Create finalized invoice with unique ID
+      // Default status to 'pending' so it shows up in dashboard immediately
       const finalizedData: FinalizedInvoice = {
         ...invoiceData,
         id: `invoice_${Date.now()}`,
-        status: 'finalized',
+        status: 'pending',
         finalizedAt: new Date().toISOString(),
         pdfGenerated: false
       };

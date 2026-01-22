@@ -56,9 +56,10 @@ export default function Dashboard() {
       const invoices = finalizedInvoices ? JSON.parse(finalizedInvoices) : [];
       
       // Ensure all invoices have a status
+      // Convert old 'finalized' status to 'pending' for backward compatibility
       const invoicesWithStatus = invoices.map((invoice: any) => ({
         ...invoice,
-        status: invoice.status || 'pending'
+        status: invoice.status === 'finalized' ? 'pending' : (invoice.status || 'pending')
       }));
 
       // Update localStorage if needed
