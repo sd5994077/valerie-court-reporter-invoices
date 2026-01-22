@@ -1,4 +1,27 @@
+import twilio from 'twilio';
 import type { DueNotification } from '../../types/notifications';
+
+/**
+ * Validates phone number format (E.164: +[country code][number])
+ * Returns true if valid, false otherwise
+ */
+function isValidPhoneNumber(phone: string): boolean {
+  // E.164 format: +[1-3 digit country code][up to 15 digits]
+  const e164Regex = /^\+[1-9]\d{1,14}$/;
+  return e164Regex.test(phone);
+}
+
+/**
+ * Truncates SMS message to fit within character limits
+ * - Single SMS: 160 chars (GSM-7) or 70 chars (UCS-2/Unicode)
+ * - We use 155 chars to be safe and add "..." if truncated
+ */
+function truncateSMSMessage(message: string, maxLength: number = 155): string {
+  if (message.length <= maxLength) {
+    return message;
+  }
+  return message.substring(0, maxLength - 3) + '...';
+}
 
 /**
  * Send email notification
@@ -42,37 +65,108 @@ export async function sendEmail(notification: DueNotification): Promise<void> {
 }
 
 /**
- * Send SMS notification
+ * Send SMS notification via Twilio
  * 
- * TODO: Replace with real SMS provider (Twilio)
+ * Features:
+ * - Phone number validation (E.164 format)
+ * - Message truncation for SMS length limits
+ * - Batch sending with error tracking
+ * - Cost logging for budget tracking
  * 
- * Setup instructions:
- * 1. Get Twilio account from https://www.twilio.com
- * 2. Add to .env: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM (phone number)
- * 3. Replace this function with actual API call
+ * Required env vars:
+ * - TWILIO_ACCOUNT_SID: Your Twilio Account SID
+ * - TWILIO_AUTH_TOKEN: Your Twilio Auth Token
+ * - TWILIO_FROM: Your Twilio phone number (E.164 format, e.g., +15551234567)
  */
 export async function sendSMS(notification: DueNotification): Promise<void> {
-  // STUB: Log to console in development
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM;
+
+  // Validate Twilio credentials
+  if (!accountSid || !authToken || !fromNumber) {
+    const missingVars = [];
+    if (!accountSid) missingVars.push('TWILIO_ACCOUNT_SID');
+    if (!authToken) missingVars.push('TWILIO_AUTH_TOKEN');
+    if (!fromNumber) missingVars.push('TWILIO_FROM');
+    
+    console.error(`[SMS] Missing Twilio credentials: ${missingVars.join(', ')}`);
+    throw new Error(`Twilio not configured. Missing: ${missingVars.join(', ')}`);
+  }
+
+  // Validate and filter recipients
+  const validRecipients = notification.recipients.filter(phone => {
+    const isValid = isValidPhoneNumber(phone);
+    if (!isValid) {
+      console.warn(`[SMS] Invalid phone number format (must be E.164): ${phone}`);
+    }
+    return isValid;
+  });
+
+  if (validRecipients.length === 0) {
+    console.warn('[SMS] No valid recipients after validation');
+    return;
+  }
+
+  // Truncate message if needed
+  const message = truncateSMSMessage(notification.message);
+  if (message !== notification.message) {
+    console.info(`[SMS] Message truncated from ${notification.message.length} to ${message.length} chars`);
+  }
+
+  // Log in development
   if (process.env.NODE_ENV === 'development') {
-    console.log('[SMS STUB] Would send SMS:', {
-      to: notification.recipients,
-      message: notification.message
+    console.log('[SMS DEV] Would send SMS:', {
+      to: validRecipients,
+      message: message,
+      charCount: message.length
     });
   }
 
-  // TODO: Implement real SMS sending
-  // Example with Twilio:
-  // const twilio = require('twilio');
-  // const client = twilio(
-  //   process.env.TWILIO_ACCOUNT_SID,
-  //   process.env.TWILIO_AUTH_TOKEN
-  // );
-  // for (const recipient of notification.recipients) {
-  //   await client.messages.create({
-  //     body: notification.message,
-  //     from: process.env.TWILIO_FROM,
-  //     to: recipient
-  //   });
-  // }
+  try {
+    const client = twilio(accountSid, authToken);
+    
+    // Send to all valid recipients with individual error tracking
+    const results = await Promise.allSettled(
+      validRecipients.map(async (recipient) => {
+        try {
+          const msg = await client.messages.create({
+            body: message,
+            from: fromNumber,
+            to: recipient
+          });
+          
+          // Log success with message SID for tracking
+          console.log(`[SMS] ✓ Sent to ${recipient} - SID: ${msg.sid} - Status: ${msg.status}`);
+          return { success: true, recipient, sid: msg.sid };
+        } catch (err: any) {
+          console.error(`[SMS] ✗ Failed to ${recipient} - Error: ${err.message}`);
+          throw err;
+        }
+      })
+    );
+    
+    // Calculate success/failure counts
+    const successful = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    
+    console.log(`[SMS] Batch complete: ${successful} sent, ${failed} failed (${validRecipients.length} total)`);
+    
+    // Log estimated cost (approximate: $0.0079/SMS for US)
+    const estimatedCost = successful * 0.0079;
+    console.info(`[SMS] Estimated cost: $${estimatedCost.toFixed(4)} USD`);
+    
+    // If any failed, throw error with details
+    if (failed > 0) {
+      const failedRecipients = results
+        .map((r, idx) => r.status === 'rejected' ? validRecipients[idx] : null)
+        .filter(Boolean);
+      throw new Error(`SMS failed for ${failed} recipient(s): ${failedRecipients.join(', ')}`);
+    }
+    
+  } catch (error: any) {
+    console.error('[SMS] Error sending notifications:', error);
+    throw error;
+  }
 }
 

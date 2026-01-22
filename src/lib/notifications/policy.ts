@@ -92,6 +92,10 @@ function evaluatePolicy(
     if (policy.specificDays.includes(daysLeft)) {
       addNotif();
     }
+    // For overdue appeals (negative days), send daily notifications
+    else if (daysLeft < 0 && daysLeft >= policy.untilDaysBefore) {
+      addNotif();
+    }
     return notifications;
   }
 
@@ -110,14 +114,60 @@ function evaluatePolicy(
 function formatMessage(appeal: Appeal, daysLeft: number, channel: 'email' | 'sms'): string {
   const style = appeal.style || 'Untitled Case';
   const courtNum = appeal.courtOfAppealsNumber || 'N/A';
+  const trialNum = appeal.trialCourtCaseNumber || '';
+  const isSMS = channel === 'sms';
   
+  // Calculate effective deadline for display
+  const baseDeadline = new Date(appeal.appealDeadline);
+  const totalExtDays = appeal.extensions.reduce((n, e) => n + (e.daysGranted || 0), 0);
+  const effDeadline = new Date(baseDeadline);
+  effDeadline.setDate(effDeadline.getDate() + totalExtDays);
+  const deadlineStr = effDeadline.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  
+  // Overdue - EMERGENCY
   if (daysLeft < 0) {
-    return `${channel === 'email' ? 'URGENT: ' : ''}Appeal "${style}" (${courtNum}) is ${Math.abs(daysLeft)} days past deadline!`;
-  } else if (daysLeft === 0) {
-    return `${channel === 'email' ? 'URGENT: ' : ''}Appeal "${style}" (${courtNum}) deadline is TODAY!`;
-  } else if (daysLeft === 1) {
-    return `Appeal "${style}" (${courtNum}) deadline is TOMORROW (${daysLeft} day left)`;
-  } else {
-    return `Appeal "${style}" (${courtNum}) deadline in ${daysLeft} days`;
+    const overdueDays = Math.abs(daysLeft);
+    if (isSMS) {
+      return `🚨 OVERDUE: "${style}" (${courtNum}) - ${overdueDays}d past deadline! Due: ${deadlineStr}. Immediate action required.`;
+    }
+    return `🚨 EMERGENCY: Appeal "${style}" (COA #${courtNum}${trialNum ? `, Trial #${trialNum}` : ''}) is ${overdueDays} day${overdueDays > 1 ? 's' : ''} PAST DEADLINE.\n\nDeadline was: ${deadlineStr}\n\nImmediate action required.`;
   }
+  
+  // Deadline day - URGENT
+  if (daysLeft === 0) {
+    if (isSMS) {
+      return `⚠️ TODAY: "${style}" (${courtNum}) deadline is TODAY ${deadlineStr}! Submit now.`;
+    }
+    return `⚠️ URGENT: Appeal "${style}" (COA #${courtNum}${trialNum ? `, Trial #${trialNum}` : ''}) deadline is TODAY!\n\nDeadline: ${deadlineStr}\n\nSubmit immediately.`;
+  }
+  
+  // Tomorrow - HIGH PRIORITY
+  if (daysLeft === 1) {
+    if (isSMS) {
+      return `⚠️ TOMORROW: "${style}" (${courtNum}) due ${deadlineStr}. Final prep day!`;
+    }
+    return `⚠️ HIGH PRIORITY: Appeal "${style}" (COA #${courtNum}${trialNum ? `, Trial #${trialNum}` : ''}) deadline is TOMORROW.\n\nDeadline: ${deadlineStr}\n\nThis is your final preparation day.`;
+  }
+  
+  // Critical window (2-3 days) - CRITICAL
+  if (daysLeft <= 3) {
+    if (isSMS) {
+      return `🔴 CRITICAL: "${style}" (${courtNum}) - ${daysLeft}d left. Due: ${deadlineStr}`;
+    }
+    return `🔴 CRITICAL: Appeal "${style}" (COA #${courtNum}${trialNum ? `, Trial #${trialNum}` : ''}) - Only ${daysLeft} days remaining.\n\nDeadline: ${deadlineStr}\n\nComplete and submit soon.`;
+  }
+  
+  // Action window (4-7 days) - ACTION REQUIRED
+  if (daysLeft <= 7) {
+    if (isSMS) {
+      return `📋 ACTION: "${style}" (${courtNum}) - ${daysLeft}d left. Due: ${deadlineStr}`;
+    }
+    return `📋 ACTION REQUIRED: Appeal "${style}" (COA #${courtNum}${trialNum ? `, Trial #${trialNum}` : ''}) - ${daysLeft} days until deadline.\n\nDeadline: ${deadlineStr}\n\nBegin final review and preparation.`;
+  }
+  
+  // Planning window (8-15 days) - REMINDER
+  if (isSMS) {
+    return `📅 Reminder: "${style}" (${courtNum}) - ${daysLeft}d left. Due: ${deadlineStr}`;
+  }
+  return `📅 REMINDER: Appeal "${style}" (COA #${courtNum}${trialNum ? `, Trial #${trialNum}` : ''}) - ${daysLeft} days until deadline.\n\nDeadline: ${deadlineStr}\n\nPlan your schedule accordingly.`;
 }
