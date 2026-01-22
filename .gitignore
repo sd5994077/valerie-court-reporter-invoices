@@ -40,3 +40,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 .cache
+
+# Backup folders (use git history instead)
+Backup_*/
+*.bak

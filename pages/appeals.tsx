@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { MobileNavigation } from '../src/components/MobileNavigation';
+import { logger } from '../src/utils/logger';
+import { safeGetFromStorage, safeSetToStorage } from '../src/utils/storage';
 
 // ============================================================================
 // CONSTANTS
@@ -135,21 +137,18 @@ function getBackgroundClass(appeal: Appeal) {
 }
 
 function saveStore(items: Appeal[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch (error) {
-    console.error('Failed to save appeals to localStorage:', error);
+  const success = safeSetToStorage(STORAGE_KEY, items);
+  if (!success) {
+    logger.error('Failed to save appeals to localStorage');
   }
 }
 
 function loadStore(): Appeal[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Appeal[]) : [];
-  } catch (error) {
-    console.error('Failed to load appeals from localStorage:', error);
-    return [];
-  }
+  return safeGetFromStorage({
+    key: STORAGE_KEY,
+    defaultValue: [],
+    validator: (data) => Array.isArray(data)
+  });
 }
 
 /**
@@ -393,7 +392,7 @@ export default function AppealsPage() {
         
         // Block updates to archived appeals
         if (a.status === 'Archived') {
-          console.warn('Cannot update archived appeal:', id);
+          logger.warn('Cannot update archived appeal:', id);
           return a;
         }
         

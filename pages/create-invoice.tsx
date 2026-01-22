@@ -4,6 +4,8 @@ import { InvoiceForm } from '../src/components/InvoiceForm';
 import { getBranding } from '../src/config/branding';
 import { MobileNavigation } from '../src/components/MobileNavigation';
 import type { InvoiceFormData } from '../src/types/invoice';
+import { logger } from '../src/utils/logger';
+import { safeGetFromStorage, safeSetToStorage, safeRemoveFromStorage } from '../src/utils/storage';
 import Link from 'next/link';
 
 export default function CreateInvoicePage() {
@@ -18,12 +20,16 @@ export default function CreateInvoicePage() {
     
     try {
       // Save invoice data to localStorage for review
-      localStorage.setItem('invoiceData', JSON.stringify(data));
+      const success = safeSetToStorage('invoiceData', data);
       
-      // Navigate to review page
-      router.push('/review-invoice');
+      if (success) {
+        // Navigate to review page
+        router.push('/review-invoice');
+      } else {
+        throw new Error('Failed to save invoice data');
+      }
     } catch (error) {
-      console.error('Error saving invoice data:', error);
+      logger.error('Error saving invoice data:', error);
       alert('Error saving invoice data. Please try again.');
     } finally {
       setIsLoading(false);
@@ -33,17 +39,24 @@ export default function CreateInvoicePage() {
   // Load existing data if coming back from review (edit mode)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const draftData = localStorage.getItem('invoiceDraft');
-      const editMode = localStorage.getItem('editMode');
+      const draft = safeGetFromStorage({
+        key: 'invoiceDraft',
+        defaultValue: null
+      });
       
-      if (draftData && editMode) {
+      const editMode = safeGetFromStorage({
+        key: 'editMode',
+        defaultValue: null
+      });
+      
+      if (draft && editMode) {
         // We're in edit mode - load the draft data
-        setDraftData(JSON.parse(draftData));
+        setDraftData(draft);
         // Force form re-mount by updating key
         setFormKey(parseInt(editMode));
         // Clear edit mode flag
-        localStorage.removeItem('editMode');
-        console.log('Loaded draft data for editing');
+        safeRemoveFromStorage('editMode');
+        logger.info('Loaded draft data for editing');
       }
     }
   }, []);

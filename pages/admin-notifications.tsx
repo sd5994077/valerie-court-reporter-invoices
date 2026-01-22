@@ -3,6 +3,8 @@ import { MobileNavigation } from '../src/components/MobileNavigation';
 import type { GlobalNotificationSettings, NotificationPolicy, DueNotification } from '../src/types/notifications';
 import { evaluateDueNotifications } from '../src/lib/notifications/policy';
 import type { Appeal } from './appeals';
+import { logger } from '../src/utils/logger';
+import { safeGetFromStorage, safeSetToStorage } from '../src/utils/storage';
 
 // Industry-standard notification schedule for legal deadlines
 // Tiered escalation: Planning (15-8d) → Action (7-4d) → Critical (3-0d)
@@ -27,26 +29,25 @@ const DEFAULTS: GlobalNotificationSettings = {
 };
 
 function loadSettings(): GlobalNotificationSettings {
-  try {
-    const raw = localStorage.getItem('notif_settings_v1');
-    const parsed = raw ? JSON.parse(raw) : DEFAULTS;
-    // Merge with defaults to ensure new fields exist
-    return { ...DEFAULTS, ...parsed, globalContacts: parsed.globalContacts || DEFAULTS.globalContacts };
-  } catch {
-    return DEFAULTS;
-  }
+  const parsed = safeGetFromStorage({
+    key: 'notif_settings_v1',
+    defaultValue: DEFAULTS
+  });
+  
+  // Merge with defaults to ensure new fields exist
+  return { ...DEFAULTS, ...parsed, globalContacts: parsed.globalContacts || DEFAULTS.globalContacts };
 }
+
 function saveSettings(s: GlobalNotificationSettings) {
-  localStorage.setItem('notif_settings_v1', JSON.stringify(s));
+  safeSetToStorage('notif_settings_v1', s);
 }
 
 function loadAppeals(): Appeal[] {
-  try {
-    const raw = localStorage.getItem('appeals_store_v1');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return safeGetFromStorage({
+    key: 'appeals_store_v1',
+    defaultValue: [],
+    validator: (data) => Array.isArray(data)
+  });
 }
 
 export default function AdminNotificationsPage() {
@@ -168,8 +169,8 @@ export default function AdminNotificationsPage() {
       const result = await res.json();
       alert(`Triggered ${due.length} notifications.\nSuccess: ${result.successCount}\nFailed: ${result.failureCount}`);
     } catch (error) {
-      console.error('Error sending notifications:', error);
-      alert('Failed to send notifications. See console for details.');
+      logger.error('Error sending notifications:', error);
+      alert('Failed to send notifications. Check the logs for details.');
     }
   }
 

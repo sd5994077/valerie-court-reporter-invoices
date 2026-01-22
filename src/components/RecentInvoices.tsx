@@ -3,6 +3,10 @@ import { useRouter } from 'next/router';
 import { Toast } from './Toast';
 import { generatePDF as generatePDFUtil } from '../utils/pdfGenerator';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { logger } from '../utils/logger';
+import { safeGetFromStorage, safeSetToStorage } from '../utils/storage';
+import { calculateInvoiceTotal } from '../utils/invoiceCalculations';
+import { INVOICE_CURRENT_VERSION } from '../config/invoiceMigrations';
 import type { InvoiceFormData } from '../types/invoice';
 
 interface Invoice {
@@ -196,7 +200,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       setShowToast(true);
       
     } catch (error) {
-      console.error('PDF failed:', error);
+      logger.error('PDF failed:', error);
       const msg = error instanceof Error ? error.message : 'Unknown error';
       alert(`PDF Error: ${msg}`);
       setToastMessage(`❌ PDF failed: ${msg}`);
@@ -209,17 +213,21 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
 
   const updateInvoiceStatus = (invoiceId: string, newStatus: 'pending' | 'completed' | 'overdue' | 'closed', extraData?: any) => {
     try {
-      const finalizedInvoices = localStorage.getItem('finalizedInvoices');
-      const invoices = finalizedInvoices ? JSON.parse(finalizedInvoices) : [];
+      const invoices = safeGetFromStorage({
+        key: 'finalizedInvoices',
+        defaultValue: [],
+        validator: (data) => Array.isArray(data),
+        version: INVOICE_CURRENT_VERSION
+      });
       
       const invoiceIndex = invoices.findIndex((inv: Invoice) => inv.id === invoiceId);
       if (invoiceIndex !== -1) {
-        invoices[invoiceIndex] = { 
-          ...invoices[invoiceIndex], 
+        invoices[invoiceIndex] = {
+          ...invoices[invoiceIndex],
           status: newStatus,
           ...extraData
         };
-        localStorage.setItem('finalizedInvoices', JSON.stringify(invoices));
+        safeSetToStorage('finalizedInvoices', invoices, INVOICE_CURRENT_VERSION);
         onRefresh();
         
         const statusLabels = {
@@ -234,7 +242,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         setShowToast(true);
       }
     } catch (error) {
-      console.error('Failed to update invoice status:', error);
+      logger.error('Failed to update invoice status:', error);
       setToastMessage('Failed to update invoice status. Please try again.');
       setToastType('error');
       setShowToast(true);
@@ -245,18 +253,22 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
   const handleDeleteInvoice = (invoiceId: string, invoiceNumber: string) => {
     if (confirm(`Are you sure you want to delete invoice ${invoiceNumber}? This action cannot be undone.`)) {
       try {
-        const finalizedInvoices = localStorage.getItem('finalizedInvoices');
-        const invoices = finalizedInvoices ? JSON.parse(finalizedInvoices) : [];
+        const invoices = safeGetFromStorage({
+          key: 'finalizedInvoices',
+          defaultValue: [],
+          validator: (data) => Array.isArray(data),
+          version: INVOICE_CURRENT_VERSION
+        });
         
         const filteredInvoices = invoices.filter((inv: Invoice) => inv.id !== invoiceId);
-        localStorage.setItem('finalizedInvoices', JSON.stringify(filteredInvoices));
+        safeSetToStorage('finalizedInvoices', filteredInvoices, INVOICE_CURRENT_VERSION);
         onRefresh();
         
         setToastMessage(`Invoice ${invoiceNumber} has been deleted successfully.`);
         setToastType('success');
         setShowToast(true);
       } catch (error) {
-        console.error('Failed to delete invoice:', error);
+        logger.error('Failed to delete invoice:', error);
         setToastMessage('Failed to delete invoice. Please try again.');
         setToastType('error');
         setShowToast(true);
@@ -267,7 +279,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
 
   const handleViewInvoice = (invoice: Invoice) => {
     // Save invoice data for viewing and navigate to view page
-    localStorage.setItem('viewingInvoice', JSON.stringify(invoice));
+    safeSetToStorage('viewingInvoice', invoice);
     router.push('/view-invoice');
     setOpenDropdown(null);
   };

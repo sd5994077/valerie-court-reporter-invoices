@@ -4,6 +4,11 @@ import { MobileNavigation } from '../src/components/MobileNavigation';
 import { RevenueByCounty } from '../src/components/RevenueByCounty';
 import { RecentInvoices } from '../src/components/RecentInvoices';
 import { formatCurrency } from '../src/utils/formatters';
+import { logger } from '../src/utils/logger';
+import { safeGetFromStorage, safeSetToStorage } from '../src/utils/storage';
+import { migrateData } from '../src/utils/migration';
+import { INVOICE_MIGRATIONS, INVOICE_CURRENT_VERSION } from '../src/config/invoiceMigrations';
+import { calculateInvoiceTotal, calculateRevenue, calculateAverageInvoice } from '../src/utils/invoiceCalculations';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -52,24 +57,28 @@ export default function Dashboard() {
   const loadRawData = () => {
     setIsLoading(true);
     try {
-      const finalizedInvoices = localStorage.getItem('finalizedInvoices');
-      const invoices = finalizedInvoices ? JSON.parse(finalizedInvoices) : [];
+      // Apply migrations first
+      const migrationResult = migrateData(
+        'finalizedInvoices',
+        INVOICE_MIGRATIONS,
+        INVOICE_CURRENT_VERSION
+      );
       
-      // Ensure all invoices have a status
-      // Convert old 'finalized' status to 'pending' for backward compatibility
-      const invoicesWithStatus = invoices.map((invoice: any) => ({
-        ...invoice,
-        status: invoice.status === 'finalized' ? 'pending' : (invoice.status || 'pending')
-      }));
-
-      // Update localStorage if needed
-      if (invoicesWithStatus.length > 0) {
-        localStorage.setItem('finalizedInvoices', JSON.stringify(invoicesWithStatus));
+      if (!migrationResult.success) {
+        logger.error('Failed to migrate invoice data:', migrationResult.error);
       }
+      
+      // Load invoices with safe storage
+      const invoices = safeGetFromStorage({
+        key: 'finalizedInvoices',
+        defaultValue: [],
+        validator: (data) => Array.isArray(data),
+        version: INVOICE_CURRENT_VERSION
+      });
 
       // Extract available years
       const years = new Set<string>();
-      invoicesWithStatus.forEach((inv: any) => {
+      invoices.forEach((inv: any) => {
         if (inv.date) {
           const year = new Date(inv.date).getFullYear().toString();
           years.add(year);
@@ -78,9 +87,9 @@ export default function Dashboard() {
       // Sort years descending
       setAvailableYears(Array.from(years).sort().reverse());
 
-      setAllInvoices(invoicesWithStatus);
+      setAllInvoices(invoices);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      logger.error('Error loading dashboard data:', error);
       setIsLoading(false);
     }
   };
@@ -118,23 +127,16 @@ export default function Dashboard() {
         return status === 'completed' || status === 'closed';
       });
       
-      const totalRevenue = revenueInvoices.reduce((sum: number, invoice: any) => {
-        const invoiceTotal = invoice.lineItems.reduce((lineSum: number, item: any) => 
-          lineSum + (item.quantity * item.rate), 0
-        );
-        return sum + invoiceTotal;
-      }, 0);
-      
+      // Use centralized calculation utilities
+      const totalRevenue = calculateRevenue(revenueInvoices);
       const invoiceCount = filteredInvoices.length;
-      const averageInvoice = revenueInvoices.length > 0 ? totalRevenue / revenueInvoices.length : 0;
+      const averageInvoice = calculateAverageInvoice(revenueInvoices);
       
       // Group by county (only for revenue-generating invoices)
       const countyRevenue: { [key: string]: number } = {};
       revenueInvoices.forEach((invoice: any) => {
         const county = invoice.customFields?.county || 'Other';
-        const invoiceTotal = invoice.lineItems.reduce((sum: number, item: any) => 
-          sum + (item.quantity * item.rate), 0
-        );
+        const invoiceTotal = calculateInvoiceTotal(invoice);
         countyRevenue[county] = (countyRevenue[county] || 0) + invoiceTotal;
       });
       

@@ -7,6 +7,9 @@ import { useRouter } from 'next/router';
 import { getBranding } from '../config/branding';
 import { generatePDF, isProbablyIOS } from '../utils/pdfGenerator';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { logger } from '../utils/logger';
+import { safeGetFromStorage, safeSetToStorage, safeRemoveFromStorage } from '../utils/storage';
+import { INVOICE_CURRENT_VERSION } from '../config/invoiceMigrations';
 
 interface InvoiceReviewProps {
   invoiceData: InvoiceFormData;
@@ -53,14 +56,19 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
       };
 
       // Save to localStorage (simulating database save)
-      const existingInvoices = localStorage.getItem('finalizedInvoices');
-      const invoices = existingInvoices ? JSON.parse(existingInvoices) : [];
+      const invoices = safeGetFromStorage({
+        key: 'finalizedInvoices',
+        defaultValue: [],
+        validator: (data) => Array.isArray(data),
+        version: INVOICE_CURRENT_VERSION
+      });
+      
       invoices.push(finalizedData);
-      localStorage.setItem('finalizedInvoices', JSON.stringify(invoices));
+      safeSetToStorage('finalizedInvoices', invoices, INVOICE_CURRENT_VERSION);
 
       // Clear the temporary draft data
-      localStorage.removeItem('invoiceData');
-      localStorage.removeItem('invoiceDraft');
+      safeRemoveFromStorage('invoiceData');
+      safeRemoveFromStorage('invoiceDraft');
 
       setFinalizedInvoice(finalizedData);
       setIsFinalized(true);
@@ -70,7 +78,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
       setShowToast(true);
       
     } catch (error) {
-      console.error('Failed to finalize invoice:', error);
+      logger.error('Failed to finalize invoice:', error);
       setToastMessage('Failed to finalize invoice. Please try again.');
       setShowToast(true);
     } finally {
@@ -87,12 +95,17 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
       // Update the saved invoice to mark PDF as generated
       if (finalizedInvoice) {
         const updatedInvoice = { ...finalizedInvoice, pdfGenerated: true };
-        const existingInvoices = localStorage.getItem('finalizedInvoices');
-        const invoices = existingInvoices ? JSON.parse(existingInvoices) : [];
+        const invoices = safeGetFromStorage({
+          key: 'finalizedInvoices',
+          defaultValue: [],
+          validator: (data) => Array.isArray(data),
+          version: INVOICE_CURRENT_VERSION
+        });
+        
         const invoiceIndex = invoices.findIndex((inv: FinalizedInvoice) => inv.id === finalizedInvoice.id);
         if (invoiceIndex !== -1) {
           invoices[invoiceIndex] = updatedInvoice;
-          localStorage.setItem('finalizedInvoices', JSON.stringify(invoices));
+          safeSetToStorage('finalizedInvoices', invoices, INVOICE_CURRENT_VERSION);
         }
         setFinalizedInvoice(updatedInvoice);
       }
@@ -107,7 +120,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
       setShowToast(true);
       
     } catch (error) {
-      console.error('PDF failed:', error);
+      logger.error('PDF failed:', error);
       const msg = error instanceof Error ? error.message : 'PDF generation failed';
       alert(`PDF Error: ${msg}`);
       setToastMessage(`❌ ${msg}`);
@@ -120,8 +133,8 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
   const handleEdit = () => {
     if (invoiceData) {
       // Save current data as draft for editing
-      localStorage.setItem('invoiceDraft', JSON.stringify(invoiceData));
-      localStorage.setItem('editMode', Date.now().toString());
+      safeSetToStorage('invoiceDraft', invoiceData);
+      safeSetToStorage('editMode', Date.now().toString());
       router.push('/create-invoice');
     }
   };

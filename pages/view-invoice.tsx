@@ -5,6 +5,7 @@ import { SignatureImage } from '../src/components/SignatureImage';
 import { VenmoQRCode } from '../src/components/VenmoQRCode';
 import { Toast } from '../src/components/Toast';
 import { generatePDF, isProbablyIOS } from '../src/utils/pdfGenerator';
+import { safeGetFromStorage } from '../src/utils/storage';
 
 // Currency formatting utility
 const formatCurrency = (amount: number) => {
@@ -36,15 +37,13 @@ export default function ViewInvoice() {
 
   useEffect(() => {
     // Load invoice data from localStorage
-    const viewingInvoiceData = localStorage.getItem('viewingInvoice');
-    if (viewingInvoiceData) {
-      try {
-        const invoice = JSON.parse(viewingInvoiceData);
-        setInvoiceData(invoice);
-      } catch (error) {
-        console.error('Failed to parse viewing invoice data:', error);
-        router.push('/dashboard');
-      }
+    const invoice = safeGetFromStorage({
+      key: 'viewingInvoice',
+      defaultValue: null
+    });
+    
+    if (invoice) {
+      setInvoiceData(invoice);
     } else {
       // No invoice data, redirect to dashboard
       router.push('/dashboard');

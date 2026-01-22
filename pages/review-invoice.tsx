@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { InvoiceReview } from '../src/components/InvoiceReview';
 import { Logo } from '../src/components/Logo';
 import type { InvoiceFormData } from '../src/types/invoice';
+import { safeGetFromStorage } from '../src/utils/storage';
 import Link from 'next/link';
 
 export default function ReviewInvoicePage() {
@@ -11,9 +12,13 @@ export default function ReviewInvoicePage() {
 
   useEffect(() => {
     // Get invoice data from localStorage (temporary storage)
-    const savedData = localStorage.getItem('invoiceData');
+    const savedData = safeGetFromStorage({
+      key: 'invoiceData',
+      defaultValue: null
+    });
+    
     if (savedData) {
-      setInvoiceData(JSON.parse(savedData));
+      setInvoiceData(savedData);
     } else {
       // Redirect to create invoice if no data
       router.push('/create-invoice');
