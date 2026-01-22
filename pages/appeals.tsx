@@ -2,6 +2,28 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { MobileNavigation } from '../src/components/MobileNavigation';
 
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const MAX_EXTENSIONS = 3;
+const MAX_EXTENSION_DAYS = 180;
+const MIN_EXTENSION_DAYS = 1;
+const MAX_EXTENSION_REQUEST_DAYS_BACK = 60; // Can backdate up to 60 days
+const ARCHIVED_PAGE_SIZE = 50;
+const MOBILE_BREAKPOINT = 768;
+
+const URGENCY_THRESHOLDS = {
+  CRITICAL: 7,    // 0-7 days left
+  WARNING: 15,    // 8-15 days left
+} as const;
+
+const STORAGE_KEY = 'appeals_store_v1';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
 export type AppealStatus =
   | 'Intake'
   | 'Active'
@@ -36,15 +58,31 @@ export interface Appeal {
   completedAt?: string;
 }
 
-const STORAGE_KEY = 'appeals_store_v1';
+const STATUS_OPTIONS: AppealStatus[] = [
+  'Intake',
+  'Active',
+  'Scope',
+  'Proofread',
+  'Awaiting Extension',
+  'Submitted',
+  'Completed',
+  'Archived',
+];
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-function parseISO(d: string) {
+function parseISO(d: string): Date {
   const dt = new Date(d);
-  return isNaN(dt.getTime()) ? new Date() : dt;
+  if (isNaN(dt.getTime())) {
+    throw new Error(`Invalid date: ${d}`);
+  }
+  return dt;
 }
 
 function addDays(date: Date, days: number) {
@@ -76,49 +114,92 @@ function daysLeft(appeal: Appeal): number {
 
 function bucket(days: number): 'lt7' | '8to15' | 'gt15' | 'past' {
   if (days < 0) return 'past';
-  if (days <= 7) return 'lt7';
-  if (days <= 15) return '8to15';
+  if (days <= URGENCY_THRESHOLDS.CRITICAL) return 'lt7';
+  if (days <= URGENCY_THRESHOLDS.WARNING) return '8to15';
   return 'gt15';
 }
 
 function getBorderClass(appeal: Appeal) {
   if (appeal.status === 'Completed' || appeal.status === 'Archived') return 'border-gray-200';
-  if (appeal.extensions.length >= 3) return 'border-pink-300';
+  if (appeal.extensions.length >= MAX_EXTENSIONS) return 'border-pink-300';
   const d = daysLeft(appeal);
-  if (d < 0 || d <= 7) return 'border-red-300';
-  if (d <= 15) return 'border-yellow-300';
+  if (d < 0 || d <= URGENCY_THRESHOLDS.CRITICAL) return 'border-red-300';
+  if (d <= URGENCY_THRESHOLDS.WARNING) return 'border-yellow-300';
   return 'border-emerald-300';
 }
 
 function getBackgroundClass(appeal: Appeal) {
   if (appeal.status === 'Completed' || appeal.status === 'Archived') return 'bg-white';
-  if (appeal.extensions.length >= 3) return 'bg-pink-50';
+  if (appeal.extensions.length >= MAX_EXTENSIONS) return 'bg-pink-50';
   return 'bg-white';
 }
 
 function saveStore(items: Appeal[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch (error) {
+    console.error('Failed to save appeals to localStorage:', error);
+  }
 }
 
 function loadStore(): Appeal[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as Appeal[]) : [];
-  } catch {
+  } catch (error) {
+    console.error('Failed to load appeals from localStorage:', error);
     return [];
   }
 }
 
-const STATUS_OPTIONS: AppealStatus[] = [
-  'Intake',
-  'Active',
-  'Scope',
-  'Proofread',
-  'Awaiting Extension',
-  'Submitted',
-  'Completed',
-  'Archived',
-];
+/**
+ * Validates extension request date
+ * - Must be in the past or today
+ * - Can be up to MAX_EXTENSION_REQUEST_DAYS_BACK days in the past
+ */
+function validateExtensionRequestDate(dateStr: string): { valid: boolean; error?: string } {
+  try {
+    const date = parseISO(dateStr);
+    const today = startOfDay(new Date());
+    const daysAgo = daysBetween(date, today);
+    
+    if (daysAgo < 0) {
+      return { valid: false, error: 'Extension request date cannot be in the future' };
+    }
+    if (daysAgo > MAX_EXTENSION_REQUEST_DAYS_BACK) {
+      return { valid: false, error: `Extension request date cannot be more than ${MAX_EXTENSION_REQUEST_DAYS_BACK} days in the past` };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Invalid date format' };
+  }
+}
+
+/**
+ * Validates extension days
+ */
+function validateExtensionDays(days: number): { valid: boolean; error?: string } {
+  if (days < MIN_EXTENSION_DAYS) {
+    return { valid: false, error: `Extension must be at least ${MIN_EXTENSION_DAYS} day` };
+  }
+  if (days > MAX_EXTENSION_DAYS) {
+    return { valid: false, error: `Extension cannot exceed ${MAX_EXTENSION_DAYS} days` };
+  }
+  return { valid: true };
+}
+
+/**
+ * Shows confirmation dialog for archiving
+ */
+function confirmArchive(): boolean {
+  return window.confirm(
+    'Archive this appeal?\n\nOnce archived, no further edits are allowed and it cannot be un-archived.\n\nAre you sure?'
+  );
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 export default function AppealsPage() {
   const [appeals, setAppeals] = useState<Appeal[]>([]);
@@ -132,7 +213,7 @@ export default function AppealsPage() {
 
   // Detect mobile viewport
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    const checkMobile = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -169,12 +250,16 @@ export default function AppealsPage() {
       Completed: 0,
       Archived: 0,
     };
-    // Use filtered appeals for stats so the dashboard reflects the search
+    
     filteredAppeals.forEach((a) => {
-      const d = daysLeft(a);
-      byBucket[bucket(d)]++;
+      // Only count active appeals in day buckets (exclude Completed/Archived)
+      if (a.status !== 'Completed' && a.status !== 'Archived') {
+        const d = daysLeft(a);
+        byBucket[bucket(d)]++;
+      }
       byStatus[a.status] = (byStatus[a.status] || 0) + 1;
     });
+    
     return { byBucket, byStatus, total: filteredAppeals.length };
   }, [filteredAppeals]);
 
@@ -201,10 +286,17 @@ export default function AppealsPage() {
     Object.keys(result).forEach((status) => {
       const col = status as AppealStatus;
       if (col === 'Archived') {
-        // Archived: sort by updatedAt (newest first), limit to 50 unless showAllArchived
+        // Archived: sort by updatedAt (newest first), limit to ARCHIVED_PAGE_SIZE unless showAllArchived
         result[col] = result[col]
           .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, showAllArchived ? undefined : 50);
+          .slice(0, showAllArchived ? undefined : ARCHIVED_PAGE_SIZE);
+      } else if (col === 'Completed') {
+        // Completed: sort by completedAt (newest first)
+        result[col] = result[col].sort((a, b) => {
+          const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+          const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+          return bTime - aTime;
+        });
       } else {
         // Other columns: sort by days left (urgent first)
         result[col] = result[col].sort((a, b) => daysLeft(a) - daysLeft(b));
@@ -247,9 +339,7 @@ export default function AppealsPage() {
     
     const rows = appeals.map(a => {
       const totalExtDays = a.extensions.reduce((n, e) => n + (e.daysGranted || 0), 0);
-      const eff = parseISO(a.appealDeadline);
-      eff.setDate(eff.getDate() + totalExtDays);
-      const effDate = eff.toISOString().split('T')[0];
+      const effDate = effectiveDeadline(a).toISOString().split('T')[0];
       
       return [
         a.id,
@@ -300,6 +390,13 @@ export default function AppealsPage() {
     setAppeals((list) =>
       list.map((a) => {
         if (a.id !== id) return a;
+        
+        // Block updates to archived appeals
+        if (a.status === 'Archived') {
+          console.warn('Cannot update archived appeal:', id);
+          return a;
+        }
+        
         const now = new Date().toISOString();
         const next: Appeal = { ...a, ...patch, updatedAt: now };
         
@@ -319,32 +416,17 @@ export default function AppealsPage() {
     );
   }
 
-  function handleStatusChange(id: string, newStatus: AppealStatus) {
-    // Confirm before archiving
-    if (newStatus === 'Archived') {
-      const confirmed = window.confirm(
-        'Archive this appeal?\n\nOnce archived, no further edits are allowed. The appeal will be read-only.'
-      );
-      if (!confirmed) {
-        return; // User cancelled
-      }
-    }
-    updateAppeal(id, { status: newStatus });
-  }
-
   function deleteAppeal(id: string) {
-    setAppeals((list) => list.filter((a) => a.id !== id));
-  }
-
-  function addExtension(id: string, days: number = 30) {
-    setAppeals((list) =>
-      list.map((a) => {
-        if (a.id !== id) return a;
-        if (a.extensions.length >= 3) return a;
-        const entry: ExtensionEntry = { id: uid(), requestedOn: new Date().toISOString(), daysGranted: days };
-        return { ...a, extensions: [...a.extensions, entry], updatedAt: new Date().toISOString() };
-      })
+    const appeal = appeals.find(a => a.id === id);
+    if (!appeal) return;
+    
+    const confirmed = window.confirm(
+      `Delete appeal "${appeal.style || 'Untitled'}"?\n\nThis action cannot be undone.`
     );
+    
+    if (confirmed) {
+      setAppeals((list) => list.filter((a) => a.id !== id));
+    }
   }
 
   function onDragStart(e: React.DragEvent, id: string) {
@@ -357,10 +439,12 @@ export default function AppealsPage() {
     e.dataTransfer.setData('text/plain', id);
     e.dataTransfer.effectAllowed = 'move';
   }
+  
   function onDragOver(e: React.DragEvent) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   }
+  
   function onDrop(e: React.DragEvent, status: AppealStatus) {
     e.preventDefault();
     if (status === 'Archived') {
@@ -371,6 +455,11 @@ export default function AppealsPage() {
     const id = draggingRef.current || e.dataTransfer.getData('text/plain');
     const appeal = appeals.find(a => a.id === id);
     if (id && appeal?.status !== 'Archived') {
+      // Check if moving TO Archived status
+      if (status === 'Archived' && !confirmArchive()) {
+        draggingRef.current = null;
+        return;
+      }
       updateAppeal(id, { status });
     }
     draggingRef.current = null;
@@ -452,11 +541,7 @@ export default function AppealsPage() {
           nav, header button, .print\\:hidden { display: none !important; }
           main { padding: 0 !important; max-width: none !important; }
           header { border: none !important; }
-          /* Transform grid to flex for print to show more columns if possible, or keep grid but adjust width */
           .grid-cols-1 { display: grid; grid-template-columns: repeat(4, 1fr) !important; gap: 1rem !important; }
-          /* Hide archived column in print to save space if needed, or keep it */
-          
-          /* Ensure cards break properly */
           .rounded-2xl { break-inside: avoid; page-break-inside: avoid; border: 1px solid #ddd; background: #f9fafb; }
           .group { break-inside: avoid; page-break-inside: avoid; border: 1px solid #eee; }
         }
@@ -527,7 +612,10 @@ export default function AppealsPage() {
                           appeal={a}
                           onDragStart={onDragStart}
                           onDelete={col === 'Archived' ? undefined : () => deleteAppeal(a.id)}
-                          onUpdate={(p) => updateAppeal(a.id, p)}
+                          onUpdate={(p) => {
+                            if (p.status === 'Archived' && !confirmArchive()) return;
+                            updateAppeal(a.id, p);
+                          }}
                           onEdit={() => setEditing(a)}
                           onCollapse={() => toggleCardExpansion(a.id)}
                           isArchived={col === 'Archived'}
@@ -565,7 +653,10 @@ export default function AppealsPage() {
                         appeal={a}
                         onDragStart={onDragStart}
                         onDelete={() => deleteAppeal(a.id)}
-                        onUpdate={(p) => updateAppeal(a.id, p)}
+                        onUpdate={(p) => {
+                          if (p.status === 'Archived' && !confirmArchive()) return;
+                          updateAppeal(a.id, p);
+                        }}
                         onEdit={() => setEditing(a)}
                         onCollapse={() => toggleCardExpansion(a.id)}
                       />
@@ -575,27 +666,29 @@ export default function AppealsPage() {
                         appeal={a}
                         onDragStart={onDragStart}
                         onDelete={() => deleteAppeal(a.id)}
-                        onAddExtension={() => setEditing(a)}
-                        onUpdate={(p) => updateAppeal(a.id, p)}
+                        onUpdate={(p) => {
+                          if (p.status === 'Archived' && !confirmArchive()) return;
+                          updateAppeal(a.id, p);
+                        }}
                         onEdit={() => setEditing(a)}
                       />
                     );
                   });
                 })()}
-                {col === 'Archived' && !showAllArchived && filteredAppeals.filter((a) => a.status === col).length > 50 && (
+                {col === 'Archived' && !showAllArchived && filteredAppeals.filter((a) => a.status === col).length > ARCHIVED_PAGE_SIZE && (
                   <button
                     onClick={() => setShowAllArchived(!showAllArchived)}
                     className="w-full text-sm text-purple-600 hover:text-purple-700 font-medium py-2"
                   >
-                    {`View All (${filteredAppeals.filter((a) => a.status === col).length - 50} more)`}
+                    {`View All (${filteredAppeals.filter((a) => a.status === col).length - ARCHIVED_PAGE_SIZE} more)`}
                   </button>
                 )}
-                {col === 'Archived' && showAllArchived && filteredAppeals.filter((a) => a.status === col).length > 50 && (
+                {col === 'Archived' && showAllArchived && filteredAppeals.filter((a) => a.status === col).length > ARCHIVED_PAGE_SIZE && (
                   <button
                     onClick={() => setShowAllArchived(!showAllArchived)}
                     className="w-full text-sm text-purple-600 hover:text-purple-700 font-medium py-2"
                   >
-                    {`Show Less (${filteredAppeals.filter((a) => a.status === col).length - 50} hidden)`}
+                    {`Show Less (${filteredAppeals.filter((a) => a.status === col).length - ARCHIVED_PAGE_SIZE} hidden)`}
                   </button>
                 )}
                   {colCount === 0 && (
@@ -621,20 +714,37 @@ export default function AppealsPage() {
           onClose={() => setEditing(null)}
           onSave={(patch) => {
             if (editing.status !== 'Archived') {
+              // Check if archiving
+              if (patch.status === 'Archived' && !confirmArchive()) {
+                return;
+              }
               updateAppeal(editing.id, patch);
             }
             setEditing(null);
           }}
           onAddExtension={(days) => {
-            if (editing.extensions.length >= 3) return;
+            if (editing.extensions.length >= MAX_EXTENSIONS) return;
+            
+            // Validate days
+            const validation = validateExtensionDays(days || MIN_EXTENSION_DAYS);
+            if (!validation.valid) {
+              alert(validation.error);
+              return;
+            }
+            
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const entry: ExtensionEntry = { id: uid(), requestedOn: today.toISOString(), daysGranted: days || 30 };
+            const entry: ExtensionEntry = { id: uid(), requestedOn: today.toISOString(), daysGranted: days || MIN_EXTENSION_DAYS };
             const newExts = [...editing.extensions, entry];
             updateAppeal(editing.id, { extensions: newExts });
             setEditing({ ...editing, extensions: newExts });
           }}
           onUpdateExtensionDate={(extId, date) => {
+            const validation = validateExtensionRequestDate(date);
+            if (!validation.valid) {
+              alert(validation.error);
+              return;
+            }
             const newExts = editing.extensions.map((e) => (e.id === extId ? { ...e, requestedOn: date } : e));
             updateAppeal(editing.id, { extensions: newExts });
             setEditing({ ...editing, extensions: newExts });
@@ -645,6 +755,11 @@ export default function AppealsPage() {
             setEditing({ ...editing, extensions: newExts });
           }}
           onUpdateExtension={(extId, days) => {
+            const validation = validateExtensionDays(days);
+            if (!validation.valid) {
+              alert(validation.error);
+              return;
+            }
             const newExts = editing.extensions.map((e) => (e.id === extId ? { ...e, daysGranted: days } : e));
             updateAppeal(editing.id, { extensions: newExts });
             setEditing({ ...editing, extensions: newExts });
@@ -654,6 +769,10 @@ export default function AppealsPage() {
     </div>
   );
 }
+
+// ============================================================================
+// SUB-COMPONENTS
+// ============================================================================
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
@@ -692,20 +811,16 @@ function AppealCard({
   appeal,
   onDragStart,
   onDelete,
-  onAddExtension,
   onUpdate,
   onEdit,
 }: {
   appeal: Appeal;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDelete: () => void;
-  onAddExtension: () => void;
   onUpdate: (patch: Partial<Appeal>) => void;
   onEdit: () => void;
 }) {
   const dLeft = daysLeft(appeal);
-  const eff = effectiveDeadline(appeal);
-  const extLeft = 3 - appeal.extensions.length;
 
   // Disable dragging on mobile (touch devices)
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -725,9 +840,9 @@ function AppealCard({
       return <Badge tone="red">Past due {Math.abs(dLeft)}d</Badge>;
     } else if (dLeft === 0) {
       return <Badge tone="red">Due today</Badge>;
-    } else if (dLeft <= 7) {
+    } else if (dLeft <= URGENCY_THRESHOLDS.CRITICAL) {
       return <Badge tone="red">{dLeft}d left</Badge>;
-    } else if (dLeft <= 15) {
+    } else if (dLeft <= URGENCY_THRESHOLDS.WARNING) {
       return <Badge tone="yellow">{dLeft}d left</Badge>;
     } else {
       return <Badge tone="green">{dLeft}d left</Badge>;
@@ -756,7 +871,7 @@ function AppealCard({
         <div className="flex items-center gap-2">
           {renderDeadlineBadge()}
           <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200" title="Extensions Used">
-            Ext: {appeal.extensions.length}/3
+            Ext: {appeal.extensions.length}/{MAX_EXTENSIONS}
           </span>
         </div>
 
@@ -767,10 +882,7 @@ function AppealCard({
             onChange={(e) => {
               const newStatus = e.target.value as AppealStatus;
               if (newStatus === 'Archived') {
-                const confirmed = window.confirm(
-                  'Archive this appeal?\n\nOnce archived, no further edits are allowed. The appeal will be read-only.'
-                );
-                if (!confirmed) {
+                if (!confirmArchive()) {
                   e.target.value = appeal.status; // Reset dropdown
                   return;
                 }
@@ -810,9 +922,9 @@ function CompactCard({
     if (isArchived || appeal.status === 'Completed' || appeal.status === 'Archived') {
       return 'border-l-gray-300';
     }
-    if (appeal.extensions.length >= 3) return 'border-l-pink-400';
-    if (dLeft < 0 || dLeft <= 7) return 'border-l-red-500';
-    if (dLeft <= 15) return 'border-l-yellow-400';
+    if (appeal.extensions.length >= MAX_EXTENSIONS) return 'border-l-pink-400';
+    if (dLeft < 0 || dLeft <= URGENCY_THRESHOLDS.CRITICAL) return 'border-l-red-500';
+    if (dLeft <= URGENCY_THRESHOLDS.WARNING) return 'border-l-yellow-400';
     return 'border-l-emerald-500';
   };
   
@@ -847,13 +959,13 @@ function CompactCard({
           Due today
         </span>
       );
-    } else if (dLeft <= 7) {
+    } else if (dLeft <= URGENCY_THRESHOLDS.CRITICAL) {
       return (
         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
           {dLeft}d left
         </span>
       );
-    } else if (dLeft <= 15) {
+    } else if (dLeft <= URGENCY_THRESHOLDS.WARNING) {
       return (
         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
           {dLeft}d left
@@ -881,7 +993,7 @@ function CompactCard({
               <>
                 {renderDeadlineBadge()}
                 <span className="text-gray-400">•</span>
-                <span>Ext: {appeal.extensions.length}/3</span>
+                <span>Ext: {appeal.extensions.length}/{MAX_EXTENSIONS}</span>
               </>
             ) : (
               appeal.completedAt ? `Completed: ${new Date(appeal.completedAt).toLocaleDateString()}` : `Updated: ${new Date(appeal.updatedAt).toLocaleDateString()}`
@@ -949,7 +1061,6 @@ function ExpandableCard({
   isArchived?: boolean;
 }) {
   const dLeft = daysLeft(appeal);
-  const eff = effectiveDeadline(appeal);
   
   // Disable dragging on mobile (touch devices)
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -969,9 +1080,9 @@ function ExpandableCard({
       return <Badge tone="red">Past due {Math.abs(dLeft)}d</Badge>;
     } else if (dLeft === 0) {
       return <Badge tone="red">Due today</Badge>;
-    } else if (dLeft <= 7) {
+    } else if (dLeft <= URGENCY_THRESHOLDS.CRITICAL) {
       return <Badge tone="red">{dLeft}d left</Badge>;
-    } else if (dLeft <= 15) {
+    } else if (dLeft <= URGENCY_THRESHOLDS.WARNING) {
       return <Badge tone="yellow">{dLeft}d left</Badge>;
     } else {
       return <Badge tone="green">{dLeft}d left</Badge>;
@@ -1012,7 +1123,7 @@ function ExpandableCard({
           <div className="flex items-center gap-2">
             {renderDeadlineBadge()}
             <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200" title="Extensions Used">
-              Ext: {appeal.extensions.length}/3
+              Ext: {appeal.extensions.length}/{MAX_EXTENSIONS}
             </span>
           </div>
 
@@ -1024,10 +1135,7 @@ function ExpandableCard({
                 onChange={(e) => {
                   const newStatus = e.target.value as AppealStatus;
                   if (newStatus === 'Archived') {
-                    const confirmed = window.confirm(
-                      'Archive this appeal?\n\nOnce archived, no further edits are allowed. The appeal will be read-only.'
-                    );
-                    if (!confirmed) {
+                    if (!confirmArchive()) {
                       e.target.value = appeal.status; // Reset dropdown
                       return;
                     }
@@ -1086,22 +1194,12 @@ function AppealEditModal({
   // Calculate effective deadline for display
   const dLeft = daysLeft(appeal);
   const effDeadline = effectiveDeadline(appeal);
+  const atExtensionLimit = appeal.extensions.length >= MAX_EXTENSIONS;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     onSave({ ...form });
     onClose();
-  }
-
-  function computeExtensionTimeline(appeal: Appeal) {
-    const base = parseISO(appeal.appealDeadline);
-    const steps: { label: string; date: Date; added: number }[] = [];
-    let current = new Date(base);
-    appeal.extensions.forEach((ext, idx) => {
-      current = addDays(current, ext.daysGranted || 0);
-      steps.push({ label: `Extension ${idx + 1}`, date: new Date(current), added: ext.daysGranted || 0 });
-    });
-    return { base, steps, final: current };
   }
 
   // Get title based on mode
@@ -1173,8 +1271,8 @@ function AppealEditModal({
                 <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium ${
                   dLeft < 0 ? 'bg-red-100 text-red-700' :
                   dLeft === 0 ? 'bg-red-100 text-red-700' :
-                  dLeft <= 7 ? 'bg-red-100 text-red-700' :
-                  dLeft <= 15 ? 'bg-yellow-100 text-yellow-700' :
+                  dLeft <= URGENCY_THRESHOLDS.CRITICAL ? 'bg-red-100 text-red-700' :
+                  dLeft <= URGENCY_THRESHOLDS.WARNING ? 'bg-yellow-100 text-yellow-700' :
                   'bg-emerald-100 text-emerald-700'
                 }`}>
                   {dLeft < 0 ? `${Math.abs(dLeft)} days overdue` : dLeft === 0 ? 'Due today' : `${dLeft} days remaining`}
@@ -1182,7 +1280,7 @@ function AppealEditModal({
                 <span className="text-gray-400">•</span>
                 <span className="text-gray-600">Due: <strong>{effDeadline.toLocaleDateString()}</strong></span>
                 <span className="text-gray-400">•</span>
-                <span className="text-gray-600">Extensions: <strong>{appeal.extensions.length}/3</strong></span>
+                <span className="text-gray-600">Extensions: <strong>{appeal.extensions.length}/{MAX_EXTENSIONS}</strong></span>
                 <span className="text-gray-400">•</span>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                   'bg-purple-100 text-purple-700'
@@ -1209,10 +1307,7 @@ function AppealEditModal({
               onChange={(e) => {
                 const newStatus = e.target.value as AppealStatus;
                 if (canEdit && newStatus === 'Archived') {
-                  const confirmed = window.confirm(
-                    'Archive this appeal?\n\nOnce archived, no further edits are allowed. The appeal will be read-only.'
-                  );
-                  if (!confirmed) {
+                  if (!confirmArchive()) {
                     return; // Don't update form state
                   }
                 }
@@ -1242,8 +1337,10 @@ function AppealEditModal({
 
           <div className="sm:col-span-2 border-t pt-4">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold text-gray-800">Extensions</h4>
-              {canEdit && (
+              <h4 className="text-sm font-semibold text-gray-800">
+                Extensions {atExtensionLimit && <span className="text-xs font-normal text-red-600">(Maximum reached)</span>}
+              </h4>
+              {canEdit && !atExtensionLimit && (
                 <div className="flex gap-2 items-center">
                   <select 
                     className="rounded-lg border px-2 py-1.5 text-xs font-medium bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -1261,7 +1358,14 @@ function AppealEditModal({
                     <option value="45">+45 Days</option>
                     <option value="60">+60 Days</option>
                     <option value="90">+90 Days</option>
+                    <option value="120">+120 Days</option>
+                    <option value="180">+180 Days</option>
                   </select>
+                </div>
+              )}
+              {canEdit && atExtensionLimit && (
+                <div className="text-xs text-red-600">
+                  Cannot add more than {MAX_EXTENSIONS} extensions
                 </div>
               )}
             </div>
@@ -1269,20 +1373,22 @@ function AppealEditModal({
               <div className="text-xs text-gray-500">No extensions yet.</div>
             )}
             <div className="space-y-2">
-              {appeal.extensions.map((ext) => (
-                <div key={ext.id} className="flex flex-wrap items-center gap-3 text-sm">
+              {appeal.extensions.map((ext, idx) => (
+                <div key={ext.id} className="flex flex-wrap items-center gap-3 text-sm bg-gray-50 p-2 rounded-lg">
+                  <span className="text-xs text-gray-500 font-medium">#{idx + 1}</span>
                   {canEdit ? (
                     <>
                       <input
                         type="date"
-                        className="w-40 rounded-lg border px-2 py-1"
+                        className="w-40 rounded-lg border px-2 py-1 text-sm"
                         value={ext.requestedOn ? ext.requestedOn.split('T')[0] : ''}
                         onChange={(e) => onUpdateExtensionDate(ext.id, e.target.value ? new Date(e.target.value).toISOString() : '')}
                       />
                       <input
                         type="number"
-                        min={0}
-                        className="w-24 rounded-lg border px-2 py-1"
+                        min={MIN_EXTENSION_DAYS}
+                        max={MAX_EXTENSION_DAYS}
+                        className="w-24 rounded-lg border px-2 py-1 text-sm"
                         value={ext.daysGranted}
                         onChange={(e) => onUpdateExtension(ext.id, Number(e.target.value) || 0)}
                       />
