@@ -10,6 +10,7 @@ import { formatCurrency, formatDate } from '../utils/formatters';
 import { logger } from '../utils/logger';
 import { safeGetFromStorage, safeSetToStorage, safeRemoveFromStorage } from '../utils/storage';
 import { INVOICE_CURRENT_VERSION } from '../config/invoiceMigrations';
+import { generateNextInvoiceNumber } from '../utils/invoiceNumberGenerator';
 
 interface InvoiceReviewProps {
   invoiceData: InvoiceFormData;
@@ -45,10 +46,15 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
     setIsProcessing(true);
     
     try {
-      // Create finalized invoice with unique ID
+      // Generate invoice number at finalization (industry standard)
+      // This prevents race conditions and ensures unique sequential numbering
+      const invoiceNumber = generateNextInvoiceNumber();
+      
+      // Create finalized invoice with unique ID and generated invoice number
       // Default status to 'pending' so it shows up in dashboard immediately
       const finalizedData: FinalizedInvoice = {
         ...invoiceData,
+        invoiceNumber, // Use generated number, not placeholder
         id: `invoice_${Date.now()}`,
         status: 'pending',
         finalizedAt: new Date().toISOString(),
@@ -73,8 +79,8 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
       setFinalizedInvoice(finalizedData);
       setIsFinalized(true);
       
-      // Show success toast
-      setToastMessage(`🎉 Invoice ${invoiceData.invoiceNumber} has been finalized! You can now download the PDF or create a new invoice.`);
+      // Show success toast with the actual invoice number
+      setToastMessage(`🎉 Invoice ${finalizedData.invoiceNumber} has been finalized! You can now download the PDF or create a new invoice.`);
       setShowToast(true);
       
     } catch (error) {
@@ -228,7 +234,15 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
               <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-start sm:space-y-0 pb-2 mb-6 sm:mb-8 border-b-2 border-purple-500">
                 <div className="text-center sm:text-left">
                   <h1 className="text-2xl sm:text-3xl font-bold text-purple-600 mb-2">Court Reporter Invoice</h1>
-                  <p className="text-gray-600 text-lg">{invoiceData.invoiceNumber}</p>
+                  <p className="text-gray-600 text-lg">
+                    {invoiceData.invoiceNumber?.includes('XXXX') ? (
+                      <span className="text-sm">
+                        <span className="text-purple-600 font-medium">Invoice # will be assigned on finalization</span>
+                      </span>
+                    ) : (
+                      invoiceData.invoiceNumber
+                    )}
+                  </p>
                 </div>
                 <div className="text-center sm:text-right">
                   <h2 className="text-base sm:text-xl font-bold text-purple-600 mb-1">Valerie De Leon, CSR #13025</h2>
@@ -255,7 +269,13 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                   )}
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-medium">Invoice Number:</span>
-                    <span className="text-gray-800 text-right">{invoiceData.invoiceNumber}</span>
+                    <span className="text-gray-800 text-right">
+                      {invoiceData.invoiceNumber?.includes('XXXX') ? (
+                        <span className="text-purple-600 font-medium text-sm">Assigned on finalization</span>
+                      ) : (
+                        invoiceData.invoiceNumber
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-medium">Date:</span>

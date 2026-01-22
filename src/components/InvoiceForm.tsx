@@ -56,27 +56,13 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   };
 
 
-  // Generate invoice number on client side only
+  // Invoice number will be generated at finalization (industry standard)
+  // This prevents race conditions and ensures unique sequential numbering
   useEffect(() => {
-    // Generate sequential invoice number: INV-YYYY-#### format
-    const now = new Date();
-    const year = now.getFullYear();
-    
-    // Check if we're on the client side
-    if (typeof window !== 'undefined') {
-      // Get the last invoice number from localStorage for this year
-      const storageKey = `lastInvoiceNumber_${year}`;
-      const lastNumber = parseInt(localStorage.getItem(storageKey) || '0');
-      const nextNumber = lastNumber + 1;
-      
-      // Store the new number
-      localStorage.setItem(storageKey, nextNumber.toString());
-      
-      // Format as 4-digit number with leading zeros
-      const formattedNumber = String(nextNumber).padStart(4, '0');
-      setInvoiceNumber(`INV-${year}-${formattedNumber}`);
-    }
-  }, []); // Empty dependency array - run once on mount
+    // Set placeholder - actual number assigned when invoice is finalized
+    const year = new Date().getFullYear();
+    setInvoiceNumber(`INV-${year}-XXXX`);
+  }, []);
 
   // Line Items
   const [lineItems, setLineItems] = useState([
