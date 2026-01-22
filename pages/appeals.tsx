@@ -446,21 +446,27 @@ export default function AppealsPage() {
   
   function onDrop(e: React.DragEvent, status: AppealStatus) {
     e.preventDefault();
-    if (status === 'Archived') {
-      // Prevent dropping into archived - must explicitly archive via status change
+    
+    const id = draggingRef.current || e.dataTransfer.getData('text/plain');
+    const appeal = appeals.find(a => a.id === id);
+    
+    // Prevent moving already archived appeals
+    if (appeal?.status === 'Archived') {
       draggingRef.current = null;
       return;
     }
-    const id = draggingRef.current || e.dataTransfer.getData('text/plain');
-    const appeal = appeals.find(a => a.id === id);
-    if (id && appeal?.status !== 'Archived') {
-      // Check if moving TO Archived status
-      if (status === 'Archived' && !confirmArchive()) {
-        draggingRef.current = null;
-        return;
-      }
+    
+    // Confirm before archiving
+    if (status === 'Archived' && !confirmArchive()) {
+      draggingRef.current = null;
+      return;
+    }
+    
+    // Update the appeal status
+    if (id) {
       updateAppeal(id, { status });
     }
+    
     draggingRef.current = null;
   }
 

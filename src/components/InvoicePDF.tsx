@@ -332,6 +332,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
             <div style={{ width: 128, height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden', border: '2px solid #e9d5ff', borderRadius: '8px', padding: '4px', backgroundColor: 'white' }}>
               {/* Use regular img tag instead of Next Image for PDF generation compatibility */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src="/assets/Venmo-Val.jpg" 
                 alt="Venmo QR Code"
