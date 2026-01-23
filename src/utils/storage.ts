@@ -28,22 +28,25 @@ export function safeGetFromStorage<T>(options: StorageOptions<T>): T {
     
     const parsed = JSON.parse(raw);
     
-    // Check version if specified
+    // Check version if specified and unwrap data
+    let dataToReturn = parsed;
     if (version !== undefined) {
       if (parsed._version !== version) {
         logger.warn(`Storage: ${key} version mismatch (expected ${version}, got ${parsed._version || 'none'})`);
         return defaultValue;
       }
+      // Unwrap versioned data
+      dataToReturn = parsed.data || parsed;
     }
     
-    // Validate structure if validator provided
-    if (validator && !validator(parsed)) {
+    // Validate structure if validator provided (validate UNWRAPPED data)
+    if (validator && !validator(dataToReturn)) {
       logger.error(`Storage: ${key} failed validation`);
       return defaultValue;
     }
     
-    // Return the data (unwrap if versioned)
-    return version !== undefined ? parsed.data : parsed;
+    // Return the unwrapped data
+    return dataToReturn;
   } catch (error) {
     logger.error(`Storage: Error loading ${key}:`, error);
     
