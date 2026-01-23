@@ -96,7 +96,9 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
     setPdfGenerating(true);
     
     try {
-      const result = await generatePDF(invoiceData);
+      // Use finalized invoice data (with real invoice number) if available
+      const dataForPDF = finalizedInvoice || invoiceData;
+      const result = await generatePDF(dataForPDF);
       
       // Update the saved invoice to mark PDF as generated
       if (finalizedInvoice) {
