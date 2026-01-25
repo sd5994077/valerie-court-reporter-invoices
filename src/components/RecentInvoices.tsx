@@ -57,6 +57,16 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
   const [processingPdf, setProcessingPdf] = useState<string | null>(null);
   const [sortField, setSortField] = useState<'date' | 'county' | 'status' | null>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
+  const [isMobileView, setIsMobileView] = useState(false);
+
+  // Detect mobile viewport
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobileView(window.innerWidth < 640); // sm breakpoint
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Filter invoices based on showClosedInvoices
   const filteredInvoices = invoices.filter(invoice => 
@@ -284,6 +294,37 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
     setOpenDropdown(null);
   };
 
+  // Handle dropdown open with position detection (desktop only)
+  const handleDropdownToggle = (invoiceId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    if (openDropdown === invoiceId) {
+      setOpenDropdown(null);
+      return;
+    }
+
+    // On mobile, always use bottom sheet (no position detection needed)
+    if (isMobileView) {
+      setOpenDropdown(invoiceId);
+      return;
+    }
+
+    // Desktop: detect if menu would go off-screen
+    const button = event.currentTarget;
+    const buttonRect = button.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const menuHeight = 380; // Approximate height of the dropdown menu
+    const spaceBelow = viewportHeight - buttonRect.bottom;
+    const spaceAbove = buttonRect.top;
+
+    // Open upward if not enough space below but enough space above
+    if (spaceBelow < menuHeight && spaceAbove > menuHeight) {
+      setDropdownPosition('above');
+    } else {
+      setDropdownPosition('below');
+    }
+
+    setOpenDropdown(invoiceId);
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
@@ -415,97 +456,17 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                           )}
                         </button>
 
-                        {/* Actions Dropdown */}
-                        <div className="relative">
-                          <button
-                            onClick={() => setOpenDropdown(openDropdown === invoice.id ? null : invoice.id)}
-                            className="text-gray-600 hover:text-gray-700 hover:bg-gray-100 p-2 rounded transition-colors duration-200"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                              <circle cx="12" cy="12" r="1"></circle>
-                              <circle cx="19" cy="12" r="1"></circle>
-                              <circle cx="5" cy="12" r="1"></circle>
-                            </svg>
-                          </button>
-
-
-                              {openDropdown === invoice.id && (
-                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 -translate-x-28 sm:translate-x-0">
-                                  <div className="py-1">
-                                <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
-                                  Invoice Actions
-                                </div>
-                                
-                                <div className="px-3 py-2 text-xs font-medium text-gray-500">
-                                  Set Status
-                                </div>
-                                
-                                <button
-                                  onClick={() => updateInvoiceStatus(invoice.id, 'pending')}
-                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                                >
-                                  <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                  </svg>
-                                  <span>Mark as Pending</span>
-                                </button>
-                                
-                                <button
-                                  onClick={() => updateInvoiceStatus(invoice.id, 'completed')}
-                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                                >
-                                  <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                  </svg>
-                                  <span>Mark as Completed</span>
-                                </button>
-                                
-                                <button
-                                  onClick={() => updateInvoiceStatus(invoice.id, 'overdue')}
-                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                                >
-                                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-                                  </svg>
-                                  <span>Mark as Overdue</span>
-                                </button>
-                                
-                                <button
-                                  onClick={() => updateInvoiceStatus(invoice.id, 'closed')}
-                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                                >
-                                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                  <span>Mark as Closed</span>
-                                </button>
-
-                                <div className="border-t border-gray-100 mt-1 pt-1">
-                                  <button
-                                    onClick={() => handleViewInvoice(invoice)}
-                                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                                  >
-                                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                    </svg>
-                                    <span>View Invoice</span>
-                                  </button>
-                                  
-                                  <button
-                                    onClick={() => handleDeleteInvoice(invoice.id, invoice.invoiceNumber)}
-                                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
-                                  >
-                                    <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                    </svg>
-                                    <span>Delete Invoice</span>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        {/* Actions Button */}
+                        <button
+                          onClick={(e) => handleDropdownToggle(invoice.id, e)}
+                          className="text-gray-600 hover:text-gray-700 hover:bg-gray-100 p-2 rounded transition-colors duration-200"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <circle cx="12" cy="12" r="1"></circle>
+                            <circle cx="19" cy="12" r="1"></circle>
+                            <circle cx="5" cy="12" r="1"></circle>
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -618,13 +579,10 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                               )}
                             </button>
 
-                          {/* Actions Dropdown */}
+                          {/* Actions Dropdown (Desktop with auto-flip) */}
                             <div className="relative">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenDropdown(openDropdown === invoice.id ? null : invoice.id);
-                                }}
+                                onClick={(e) => handleDropdownToggle(invoice.id, e)}
                                 className="text-gray-600 hover:text-gray-700 hover:bg-gray-100 p-1 rounded transition-colors duration-200"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -634,8 +592,10 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                                 </svg>
                               </button>
 
-                              {openDropdown === invoice.id && (
-                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                              {openDropdown === invoice.id && !isMobileView && (
+                                <div className={`absolute right-0 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 ${
+                                  dropdownPosition === 'above' ? 'bottom-full mb-1' : 'mt-1'
+                                }`}>
                                   <div className="py-1">
                                     <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
                                       Invoice Actions
@@ -740,12 +700,148 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         </div>
       </div>
 
-      {/* Click outside to close dropdown */}
-      {openDropdown && (
+      {/* Click outside to close dropdown (desktop only) */}
+      {openDropdown && !isMobileView && (
         <div 
           className="fixed inset-0 z-40" 
           onClick={() => setOpenDropdown(null)}
         ></div>
+      )}
+
+      {/* Mobile Bottom Sheet Action Menu */}
+      {openDropdown && isMobileView && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/40 z-[60] animate-fade-in"
+            onClick={() => setOpenDropdown(null)}
+          ></div>
+          
+          {/* Bottom Sheet */}
+          <div className="fixed inset-x-0 bottom-0 z-[70] animate-slide-up">
+            <div className="bg-white rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto">
+              {/* Handle bar */}
+              <div className="flex justify-center py-3 border-b border-gray-200">
+                <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+              </div>
+              
+              {/* Header */}
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-base font-semibold text-gray-900">Invoice Actions</h3>
+                <button 
+                  onClick={() => setOpenDropdown(null)}
+                  className="text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Invoice Info */}
+              {(() => {
+                const selectedInvoice = sortedInvoices.find(inv => inv.id === openDropdown);
+                if (!selectedInvoice) return null;
+                
+                return (
+                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-gray-900">{selectedInvoice.invoiceNumber}</p>
+                        <p className="text-sm text-gray-600">{formatDate(selectedInvoice.date)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900">{formatCurrency(calculateInvoiceTotal(selectedInvoice))}</p>
+                        {getStatusBadge(selectedInvoice.status || 'pending')}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Action Buttons */}
+              <div className="p-4 space-y-2">
+                {/* Status Actions */}
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 px-3">Set Status</p>
+                  
+                  <button
+                    onClick={() => updateInvoiceStatus(openDropdown, 'pending')}
+                    className="w-full text-left px-4 py-3 text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 flex items-center space-x-3 rounded-lg transition-colors"
+                  >
+                    <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    <span>Mark as Pending</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => updateInvoiceStatus(openDropdown, 'completed')}
+                    className="w-full text-left px-4 py-3 text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 flex items-center space-x-3 rounded-lg transition-colors"
+                  >
+                    <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    <span>Mark as Completed</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => updateInvoiceStatus(openDropdown, 'overdue')}
+                    className="w-full text-left px-4 py-3 text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 flex items-center space-x-3 rounded-lg transition-colors"
+                  >
+                    <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                    <span>Mark as Overdue</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => updateInvoiceStatus(openDropdown, 'closed')}
+                    className="w-full text-left px-4 py-3 text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 flex items-center space-x-3 rounded-lg transition-colors"
+                  >
+                    <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>Mark as Closed</span>
+                  </button>
+                </div>
+
+                {/* Other Actions */}
+                <div className="border-t border-gray-200 pt-2">
+                  <button
+                    onClick={() => {
+                      const invoice = sortedInvoices.find(inv => inv.id === openDropdown);
+                      if (invoice) handleViewInvoice(invoice);
+                    }}
+                    className="w-full text-left px-4 py-3 text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 flex items-center space-x-3 rounded-lg transition-colors"
+                  >
+                    <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+                    <span>View Invoice</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      const invoice = sortedInvoices.find(inv => inv.id === openDropdown);
+                      if (invoice) handleDeleteInvoice(invoice.id, invoice.invoiceNumber);
+                    }}
+                    className="w-full text-left px-4 py-3 text-base text-red-600 hover:bg-red-50 active:bg-red-100 flex items-center space-x-3 rounded-lg transition-colors"
+                  >
+                    <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                    </svg>
+                    <span>Delete Invoice</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Safe area padding for iOS */}
+              <div className="h-safe-area-inset-bottom"></div>
+            </div>
+          </div>
+        </>
       )}
 
       {showToast && (
