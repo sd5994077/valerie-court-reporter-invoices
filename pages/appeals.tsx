@@ -188,6 +188,26 @@ function validateExtensionDays(days: number): { valid: boolean; error?: string }
 }
 
 /**
+ * Validates email address format
+ * Returns valid: true if email is empty (optional field) or if it's a valid email format
+ */
+function validateEmail(email: string): { valid: boolean; error?: string } {
+  // Email is optional, so empty string is valid
+  if (!email || email.trim() === '') {
+    return { valid: true };
+  }
+  
+  // Basic email validation regex - requires @ symbol and valid domain
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (!emailRegex.test(email.trim())) {
+    return { valid: false, error: 'Please enter a valid email address (e.g., name@example.com)' };
+  }
+  
+  return { valid: true };
+}
+
+/**
  * Shows confirmation dialog for archiving
  */
 function confirmArchive(): boolean {
@@ -1195,14 +1215,33 @@ function AppealEditModal({
     status: appeal.status as AppealStatus,
     notes: appeal.notes || '',
   });
+  const [emailError, setEmailError] = useState<string | undefined>(undefined);
 
   // Calculate effective deadline for display
   const dLeft = daysLeft(appeal);
   const effDeadline = effectiveDeadline(appeal);
   const atExtensionLimit = appeal.extensions.length >= MAX_EXTENSIONS;
 
+  function handleEmailChange(value: string) {
+    setForm({ ...form, requesterEmail: value });
+    const validation = validateEmail(value);
+    if (!validation.valid) {
+      setEmailError(validation.error);
+    } else {
+      setEmailError(undefined);
+    }
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    
+    // Validate email before submission
+    const emailValidation = validateEmail(form.requesterEmail);
+    if (!emailValidation.valid) {
+      setEmailError(emailValidation.error);
+      return;
+    }
+    
     onSave({ ...form });
     onClose();
   }
@@ -1297,7 +1336,7 @@ function AppealEditModal({
         
         <form onSubmit={submit} className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto">
           <TextField label="Requester Name" value={form.requesterName} onChange={(v) => setForm({ ...form, requesterName: v })} disabled={!canEdit} />
-          <TextField label="Requester Email" type="email" value={form.requesterEmail} onChange={(v) => setForm({ ...form, requesterEmail: v })} disabled={!canEdit} />
+          <TextField label="Requester Email" type="email" value={form.requesterEmail} onChange={handleEmailChange} error={emailError} disabled={!canEdit} />
           <TextField label="Requester Phone" type="tel" value={form.requesterPhone} onChange={(v) => setForm({ ...form, requesterPhone: v })} disabled={!canEdit} />
           <TextField label="Requester Address" value={form.requesterAddress} onChange={(v) => setForm({ ...form, requesterAddress: v })} disabled={!canEdit} />
           <TextField label="Court of Appeals Number" value={form.courtOfAppealsNumber} onChange={(v) => setForm({ ...form, courtOfAppealsNumber: v })} disabled={!canEdit} />
@@ -1494,10 +1533,29 @@ function AppealForm({ onClose, onCreate }: { onClose: () => void; onCreate: (a: 
     status: 'Intake' as AppealStatus,
     notes: '',
   });
+  const [emailError, setEmailError] = useState<string | undefined>(undefined);
+
+  function handleEmailChange(value: string) {
+    setForm({ ...form, requesterEmail: value });
+    const validation = validateEmail(value);
+    if (!validation.valid) {
+      setEmailError(validation.error);
+    } else {
+      setEmailError(undefined);
+    }
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.appealDeadline) return alert('Please set an appeal deadline.');
+    
+    // Validate email before submission
+    const emailValidation = validateEmail(form.requesterEmail);
+    if (!emailValidation.valid) {
+      setEmailError(emailValidation.error);
+      return;
+    }
+    
     onCreate(form);
   }
 
@@ -1525,7 +1583,7 @@ function AppealForm({ onClose, onCreate }: { onClose: () => void; onCreate: (a: 
         </div>
         <form onSubmit={submit} className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto">
           <TextField label="Requester Name" value={form.requesterName} onChange={(v) => setForm({ ...form, requesterName: v })} />
-          <TextField label="Requester Email" type="email" value={form.requesterEmail} onChange={(v) => setForm({ ...form, requesterEmail: v })} />
+          <TextField label="Requester Email" type="email" value={form.requesterEmail} onChange={handleEmailChange} error={emailError} />
           <TextField label="Requester Phone" type="tel" value={form.requesterPhone} onChange={(v) => setForm({ ...form, requesterPhone: v })} />
           <TextField label="Requester Address" value={form.requesterAddress} onChange={(v) => setForm({ ...form, requesterAddress: v })} />
           <TextField label="Court of Appeals Number" value={form.courtOfAppealsNumber} onChange={(v) => setForm({ ...form, courtOfAppealsNumber: v })} />
@@ -1554,7 +1612,7 @@ function AppealForm({ onClose, onCreate }: { onClose: () => void; onCreate: (a: 
   );
 }
 
-function TextField({ label, value, onChange, className, disabled, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; className?: string; disabled?: boolean; type?: 'text' | 'email' | 'tel' }) {
+function TextField({ label, value, onChange, className, disabled, type = 'text', error }: { label: string; value: string; onChange: (v: string) => void; className?: string; disabled?: boolean; type?: 'text' | 'email' | 'tel'; error?: string }) {
   // Add pattern for phone validation (US format)
   const phonePattern = type === 'tel' ? '[0-9]{3}-?[0-9]{3}-?[0-9]{4}' : undefined;
   const placeholder = type === 'tel' ? '123-456-7890' : type === 'email' ? 'name@example.com' : undefined;
@@ -1566,12 +1624,15 @@ function TextField({ label, value, onChange, className, disabled, type = 'text' 
         type={type}
         pattern={phonePattern}
         placeholder={placeholder}
-        className={`w-full max-w-full rounded-lg border px-3 py-2 ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`} 
+        className={`w-full max-w-full rounded-lg border px-3 py-2 ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''} ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`} 
         value={value} 
         onChange={(e) => onChange(e.target.value)} 
         disabled={disabled}
         title={type === 'tel' ? 'Phone format: 123-456-7890 or 1234567890' : type === 'email' ? 'Enter a valid email address' : undefined}
       />
+      {error && (
+        <p className="mt-1 text-sm text-red-600">{error}</p>
+      )}
     </div>
   );
 }
