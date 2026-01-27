@@ -130,12 +130,16 @@ Response:
 
 **Production:**
 ```
-POSTGRES_URL=postgresql://invoice_main_owner:npg_yxeG8hgFRS3m@ep-divine-scene-a8215e27-pooler.eastus2.azure.neon.tech/invoice_main?sslmode=require
+# Get the production connection string from Vercel environment variables or your password manager.
+# Format: postgresql://username:password@host/database?sslmode=require
+POSTGRES_URL=postgresql://<username>:<password>@<host>/<database>?sslmode=require
 ```
 
 **Staging (Preview Deployments):**
 ```
-POSTGRES_URL=postgresql://invoice_main_owner:npg_yxeG8hgFRS3m@ep-restless-grass-a8cewjep-pooler.eastus2.azure.neon.tech/invoice_main?sslmode=require
+# Get the staging connection string from Vercel environment variables or your password manager.
+# Format: postgresql://username:password@host/database?sslmode=require
+POSTGRES_URL=postgresql://<username>:<password>@<host>/<database>?sslmode=require
 ```
 
 In Vercel:

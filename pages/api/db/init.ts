@@ -15,12 +15,12 @@ export default async function handler(
       // Check connection and existing tables
       const connectionTest = await testConnection();
       const tablesCheck = await checkTables();
-      
+
       return res.status(200).json({
         connection: connectionTest,
         tables: tablesCheck,
-        message: connectionTest.success 
-          ? 'Database connection successful' 
+        message: connectionTest.success
+          ? 'Database connection successful'
           : 'Database connection failed'
       });
     }
@@ -28,7 +28,7 @@ export default async function handler(
     if (req.method === 'POST') {
       // Initialize all tables
       const result = await initializeTables();
-      
+
       if (result.success) {
         const tablesCheck = await checkTables();
         return res.status(200).json({
@@ -44,6 +44,7 @@ export default async function handler(
       }
     }
 
+    res.setHeader('Allow', ['GET', 'POST']);
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('Database initialization error:', error);

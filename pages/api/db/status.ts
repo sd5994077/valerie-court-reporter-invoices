@@ -10,18 +10,19 @@ export default async function handler(
   res: NextApiResponse
 ) {
   if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const connectionTest = await testConnection();
     const tablesCheck = await checkTables();
-    
+
     const environment = process.env.VERCEL_ENV || process.env.NODE_ENV || 'development';
     const databaseUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
     const isStaging = databaseUrl?.includes('restless-grass');
     const isProduction = databaseUrl?.includes('divine-scene');
-    
+
     return res.status(200).json({
       success: connectionTest.success,
       environment,

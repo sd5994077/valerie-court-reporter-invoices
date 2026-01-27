@@ -59,6 +59,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
   const [isMobileView, setIsMobileView] = useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
   // Detect mobile viewport
   React.useEffect(() => {
@@ -69,7 +70,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
   }, []);
 
   // Filter invoices based on showClosedInvoices
-  const filteredInvoices = invoices.filter(invoice => 
+  const filteredInvoices = invoices.filter(invoice =>
     showClosedInvoices || invoice.status !== 'closed'
   );
 
@@ -78,17 +79,17 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
     return [...filteredInvoices].sort((a, b) => {
       // Primary sort: Date (newest first by default)
       const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
-      
+
       // If user specifically selected date sorting, use the direction
       if (sortField === 'date') {
         return sortDirection === 'asc' ? -dateComparison : dateComparison;
       }
-      
+
       // Secondary sort: Status priority (Overdue, Pending, Complete, Closed)
       const statusOrder = { 'overdue': 1, 'pending': 2, 'completed': 3, 'closed': 4 };
       const statusA = statusOrder[a.status as keyof typeof statusOrder] || 5;
       const statusB = statusOrder[b.status as keyof typeof statusOrder] || 5;
-      
+
       if (sortField === 'status') {
         const statusComparison = statusA - statusB;
         if (statusComparison !== 0) {
@@ -97,7 +98,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         // If statuses are equal, fall back to date
         return dateComparison;
       }
-      
+
       if (sortField === 'county') {
         const countyA = a.customFields?.county || 'Other';
         const countyB = b.customFields?.county || 'Other';
@@ -111,7 +112,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         }
         return dateComparison;
       }
-      
+
       // Default sort: Status priority first, then date
       if (statusA !== statusB) {
         return statusA - statusB;
@@ -186,19 +187,19 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         serviceType: invoiceData.customFields?.serviceType as 'Appeals' | 'Transcripts' | 'Other' | undefined
       }
     };
-    
+
     // Use the server-side PDF generation utility
     return await generatePDFUtil(invoiceFormData);
   };
 
   const handleDownloadPDF = async (invoice: Invoice) => {
     setProcessingPdf(invoice.id);
-    
+
     try {
       const result = await generatePDF(invoice);
-      
+
       updateInvoiceStatus(invoice.id, invoice.status, { pdfGenerated: true });
-      
+
       if (result.method === 'ios-share') {
         setToastMessage(`✅ PDF saved! Open Files app to view.`);
       } else if (result.method === 'ios-view') {
@@ -208,7 +209,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       }
       setToastType('success');
       setShowToast(true);
-      
+
     } catch (error) {
       logger.error('PDF failed:', error);
       const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -229,7 +230,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         validator: (data) => Array.isArray(data),
         version: INVOICE_CURRENT_VERSION
       });
-      
+
       const invoiceIndex = invoices.findIndex((inv: Invoice) => inv.id === invoiceId);
       if (invoiceIndex !== -1) {
         invoices[invoiceIndex] = {
@@ -239,14 +240,14 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
         };
         safeSetToStorage('finalizedInvoices', invoices, INVOICE_CURRENT_VERSION);
         onRefresh();
-        
+
         const statusLabels = {
           pending: 'Pending',
-          completed: 'Completed', 
+          completed: 'Completed',
           overdue: 'Overdue',
           closed: 'Closed'
         };
-        
+
         setToastMessage(`Invoice ${invoices[invoiceIndex].invoiceNumber} marked as ${statusLabels[newStatus]}!`);
         setToastType('success');
         setShowToast(true);
@@ -269,11 +270,11 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
           validator: (data) => Array.isArray(data),
           version: INVOICE_CURRENT_VERSION
         });
-        
+
         const filteredInvoices = invoices.filter((inv: Invoice) => inv.id !== invoiceId);
         safeSetToStorage('finalizedInvoices', filteredInvoices, INVOICE_CURRENT_VERSION);
         onRefresh();
-        
+
         setToastMessage(`Invoice ${invoiceNumber} has been deleted successfully.`);
         setToastType('success');
         setShowToast(true);
@@ -311,7 +312,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
     const button = event.currentTarget;
     const buttonRect = button.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
-    const menuHeight = 380; // Approximate height of the dropdown menu
+    const menuHeight = menuRef.current?.getBoundingClientRect().height ?? 380; // Dynamic height with fallback
     const spaceBelow = viewportHeight - buttonRect.bottom;
     const spaceAbove = buttonRect.top;
 
@@ -332,9 +333,9 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       overdue: { bg: 'bg-red-100', text: 'text-red-800', label: 'Overdue' },
       closed: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Closed' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    
+
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
         {config.label}
@@ -431,7 +432,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                         {getStatusBadge(invoice.status || 'pending')}
                       </div>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <div className="text-sm text-gray-600">
                         <span className="font-medium">County:</span> {invoice.customFields?.county || 'Other'}
@@ -486,7 +487,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                           <span>INVOICE #</span>
                         </div>
                       </th>
-                      <th 
+                      <th
                         className="text-left py-3 px-2 font-medium text-purple-800 text-sm cursor-pointer hover:bg-purple-50 transition-colors duration-200 rounded"
                         onClick={() => handleSort('date')}
                       >
@@ -499,7 +500,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                         </div>
                       </th>
                       <th className="text-left py-3 px-2 font-medium text-purple-800 text-sm">CAUSE NUMBER</th>
-                      <th 
+                      <th
                         className="text-left py-3 px-2 font-medium text-purple-800 text-sm cursor-pointer hover:bg-purple-50 transition-colors duration-200 rounded"
                         onClick={() => handleSort('county')}
                       >
@@ -516,7 +517,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                           <span>AMOUNT</span>
                         </div>
                       </th>
-                      <th 
+                      <th
                         className="text-center py-3 px-2 font-medium text-purple-800 text-sm cursor-pointer hover:bg-purple-50 transition-colors duration-200 rounded"
                         onClick={() => handleSort('status')}
                       >
@@ -579,7 +580,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                               )}
                             </button>
 
-                          {/* Actions Dropdown (Desktop with auto-flip) */}
+                            {/* Actions Dropdown (Desktop with auto-flip) */}
                             <div className="relative">
                               <button
                                 onClick={(e) => handleDropdownToggle(invoice.id, e)}
@@ -593,18 +594,19 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                               </button>
 
                               {openDropdown === invoice.id && !isMobileView && (
-                                <div className={`absolute right-0 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 ${
-                                  dropdownPosition === 'above' ? 'bottom-full mb-1' : 'mt-1'
-                                }`}>
+                                <div
+                                  ref={menuRef}
+                                  className={`absolute right-0 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 ${dropdownPosition === 'above' ? 'bottom-full mb-1' : 'mt-1'
+                                    }`}>
                                   <div className="py-1">
                                     <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
                                       Invoice Actions
                                     </div>
-                                    
+
                                     <div className="px-3 py-2 text-xs font-medium text-gray-500">
                                       Set Status
                                     </div>
-                                    
+
                                     <button
                                       onClick={() => updateInvoiceStatus(invoice.id, 'pending')}
                                       className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -614,7 +616,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                                       </svg>
                                       <span>Mark as Pending</span>
                                     </button>
-                                    
+
                                     <button
                                       onClick={() => updateInvoiceStatus(invoice.id, 'completed')}
                                       className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -624,7 +626,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                                       </svg>
                                       <span>Mark as Completed</span>
                                     </button>
-                                    
+
                                     <button
                                       onClick={() => updateInvoiceStatus(invoice.id, 'overdue')}
                                       className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -634,7 +636,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                                       </svg>
                                       <span>Mark as Overdue</span>
                                     </button>
-                                    
+
                                     <button
                                       onClick={() => updateInvoiceStatus(invoice.id, 'closed')}
                                       className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -656,7 +658,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                                         </svg>
                                         <span>View Invoice</span>
                                       </button>
-                                      
+
                                       <button
                                         onClick={() => handleDeleteInvoice(invoice.id, invoice.invoiceNumber)}
                                         className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
@@ -702,8 +704,8 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
 
       {/* Click outside to close dropdown (desktop only) */}
       {openDropdown && !isMobileView && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setOpenDropdown(null)}
         ></div>
       )}
@@ -712,11 +714,11 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       {openDropdown && isMobileView && (
         <>
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-black/40 z-[60] animate-fade-in"
             onClick={() => setOpenDropdown(null)}
           ></div>
-          
+
           {/* Bottom Sheet */}
           <div className="fixed inset-x-0 bottom-0 z-[70] animate-slide-up">
             <div className="bg-white rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto">
@@ -724,11 +726,11 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
               <div className="flex justify-center py-3 border-b border-gray-200">
                 <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
               </div>
-              
+
               {/* Header */}
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-base font-semibold text-gray-900">Invoice Actions</h3>
-                <button 
+                <button
                   onClick={() => setOpenDropdown(null)}
                   className="text-gray-400 hover:text-gray-600 p-1"
                 >
@@ -742,7 +744,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
               {(() => {
                 const selectedInvoice = sortedInvoices.find(inv => inv.id === openDropdown);
                 if (!selectedInvoice) return null;
-                
+
                 return (
                   <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                     <div className="flex items-center justify-between">
@@ -764,7 +766,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                 {/* Status Actions */}
                 <div className="mb-3">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 px-3">Set Status</p>
-                  
+
                   <button
                     onClick={() => updateInvoiceStatus(openDropdown, 'pending')}
                     className="w-full text-left px-4 py-3 text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 flex items-center space-x-3 rounded-lg transition-colors"
@@ -774,7 +776,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                     </svg>
                     <span>Mark as Pending</span>
                   </button>
-                  
+
                   <button
                     onClick={() => updateInvoiceStatus(openDropdown, 'completed')}
                     className="w-full text-left px-4 py-3 text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 flex items-center space-x-3 rounded-lg transition-colors"
@@ -784,7 +786,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                     </svg>
                     <span>Mark as Completed</span>
                   </button>
-                  
+
                   <button
                     onClick={() => updateInvoiceStatus(openDropdown, 'overdue')}
                     className="w-full text-left px-4 py-3 text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 flex items-center space-x-3 rounded-lg transition-colors"
@@ -794,7 +796,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                     </svg>
                     <span>Mark as Overdue</span>
                   </button>
-                  
+
                   <button
                     onClick={() => updateInvoiceStatus(openDropdown, 'closed')}
                     className="w-full text-left px-4 py-3 text-base text-gray-700 hover:bg-gray-50 active:bg-gray-100 flex items-center space-x-3 rounded-lg transition-colors"
@@ -821,7 +823,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
                     </svg>
                     <span>View Invoice</span>
                   </button>
-                  
+
                   <button
                     onClick={() => {
                       const invoice = sortedInvoices.find(inv => inv.id === openDropdown);
