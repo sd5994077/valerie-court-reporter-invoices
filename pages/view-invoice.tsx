@@ -353,7 +353,13 @@ export default function ViewInvoice() {
               <div className="flex justify-between items-end">
                 <div>
                   <p className="text-gray-600 font-medium mb-2">Court Reporter Signature:</p>
-                  <SignatureImage />
+                  <div className="inline-block origin-top-left transform scale-[0.61875] relative top-3 mb-0">
+                    <SignatureImage showDetails={false} />
+                  </div>
+                  <div className="border-t border-gray-400 w-64 mb-1" />
+                  <p className="text-gray-500 text-sm">
+                    Valerie De Leon, CSR #13025
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-gray-600 font-medium">Date:</p>
@@ -362,10 +368,7 @@ export default function ViewInvoice() {
               </div>
 
               {/* Thank You Message */}
-              <div className="text-center mt-8 pt-6 border-t border-gray-200">
-                <p className="text-gray-600 font-medium">Thank you for your business!</p>
-                <p className="text-gray-500 text-sm mt-1">Payment is due within 30 days of invoice date.</p>
-              </div>
+              <div className="text-center mt-8 pt-6 border-t border-gray-200" />
             </div>
           </div>
         </div>

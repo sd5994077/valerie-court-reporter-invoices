@@ -434,7 +434,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-6 sm:space-y-0 sm:space-x-8 mt-4">
                 <div className="text-center sm:text-left">
                   <p className="text-gray-600 font-medium mb-2">Court Reporter Signature:</p>
-                  <div className="inline-block origin-top-left transform scale-[0.5625] mb-2 sm:mb-1">
+                  <div className="inline-block origin-top-left transform scale-[0.61875] relative top-3 mb-0">
                     <SignatureImage showDetails={false} />
                   </div>
                   <div className="border-t border-gray-400 w-64 mx-auto sm:mx-0 mb-1" />
@@ -453,11 +453,8 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                 )}
               </div>
 
-              {/* Thank You Message */}
-              <div className="text-center mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
-                <p className="text-gray-600 font-medium">Thank you for your business!</p>
-                <p className="text-gray-500 text-sm mt-1">Payment is due within 30 days of invoice date.</p>
-              </div>
+              {/* Footer divider only (no wording for now) */}
+              <div className="text-center mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200" />
             </div>
           </div>
         </div>

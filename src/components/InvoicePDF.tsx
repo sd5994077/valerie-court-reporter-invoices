@@ -381,7 +381,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
           <p style={{ color: '#666', fontWeight: 500, margin: '0 0 6px 0', fontSize: 14 }}>
             Court Reporter Signature:
           </p>
-          <div style={{ transform: 'scale(0.61875)', transformOrigin: 'left top', display: 'inline-block', marginTop: 12, marginBottom: dense ? 8 : 10 }}>
+          <div style={{ transform: 'scale(0.61875)', transformOrigin: 'left top', display: 'inline-block', position: 'relative', top: 12, marginBottom: dense ? 0 : 2 }}>
             <SignatureImage showDetails={false} />
           </div>
           <div style={{ borderTop: '1px solid #9ca3af', width: '260px', marginBottom: 4 }} />
