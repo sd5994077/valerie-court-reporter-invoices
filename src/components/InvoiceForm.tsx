@@ -831,7 +831,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                 </span>
               </label>
               <p className="mt-1 text-xs text-gray-500">
-                When checked, a signature line for "Judge R. Bruce Boyer" will appear below the payment section by default.
+                When checked, a signature line for &quot;Judge R. Bruce Boyer&quot; will appear below the payment section by default.
               </p>
 
               {/* Custom Judge Signature Override */}
