@@ -13,34 +13,34 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
     ...item,
     total: item.quantity * item.rate
   }));
-  
+
   const grandTotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
   const includeJudgeSignature = !!invoiceData.customFields?.includeJudgeSignature;
   const serviceTypeValue = invoiceData.customFields?.serviceType === 'Other'
     ? (invoiceData.customFields?.serviceTypeOther || 'Other')
     : invoiceData.customFields?.serviceType;
-  
+
   // Compact mode for long invoices to keep high-quality one-page output when possible
   const COMPACT_THRESHOLD = 12;
   const compact = lineItemsWithTotals.length > COMPACT_THRESHOLD;
-  
+
   // Dense mode for small invoices to tighten whitespace
   const DENSE_THRESHOLD = 10;
   const dense = lineItemsWithTotals.length <= DENSE_THRESHOLD;
-  
+
   const baseFont = compact ? 13 : (dense ? 13.5 : 14);
-  const baseLH   = compact ? 1.35 : (dense ? 1.45 : 1.5);
+  const baseLH = compact ? 1.35 : (dense ? 1.45 : 1.5);
   const containerPadding = compact
     ? '0.3in 0.35in 0.35in'
     : (dense ? '0.35in 0.4in 0.4in' : '0.4in 0.4in 0.45in');
-  
+
   const thPad = compact ? '10px 8px' : (dense ? '12px 8px' : '14px 10px');
-  const tdPad = compact ? '8px 8px'  : (dense ? '10px 8px' : '12px 10px');
+  const tdPad = compact ? '8px 8px' : (dense ? '10px 8px' : '12px 10px');
 
   return (
-    <div 
-      id="invoice-pdf-content" 
-      style={{ 
+    <div
+      id="invoice-pdf-content"
+      style={{
         fontFamily: 'Arial, sans-serif',
         fontSize: `${baseFont}px`,
         lineHeight: baseLH,
@@ -69,43 +69,43 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
       `}</style>
 
       {/* Header - Centered Court Reporter Information */}
-      <div className="no-break" style={{ 
+      <div className="no-break" style={{
         textAlign: 'center',
         marginBottom: dense ? '20px' : '28px',
         paddingBottom: '16px',
         borderBottom: '2px solid #7c3aed',
       }}>
-        <h1 style={{ 
-          fontSize: '22px', 
-          fontWeight: 'bold', 
-          color: '#333', 
+        <h1 style={{
+          fontSize: '22px',
+          fontWeight: 'bold',
+          color: '#333',
           margin: '0 0 6px 0'
         }}>
           Valerie DeLeon, CSR
         </h1>
-        <p style={{ 
-          color: '#666', 
+        <p style={{
+          color: '#666',
           fontSize: '14px',
           margin: '0 0 2px 0'
         }}>
           126 Old Settlers Drive
         </p>
-        <p style={{ 
-          color: '#666', 
+        <p style={{
+          color: '#666',
           fontSize: '14px',
           margin: '0 0 2px 0'
         }}>
           San Marcos, Texas 78666
         </p>
-        <p style={{ 
-          color: '#666', 
+        <p style={{
+          color: '#666',
           fontSize: '14px',
           margin: '0 0 2px 0'
         }}>
           512-878-3327
         </p>
-        <p style={{ 
-          color: '#666', 
+        <p style={{
+          color: '#666',
           fontSize: '14px',
           margin: '0'
         }}>
@@ -114,28 +114,28 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
       </div>
 
       {/* Invoice Date and Number - Same Line */}
-      <div className="no-break" style={{ 
+      <div className="no-break" style={{
         marginBottom: dense ? '18px' : '24px',
         paddingBottom: '12px',
         borderBottom: '1px solid #e5e7eb'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <div>
-              <span style={{ fontWeight: '600', color: '#666' }}>Invoice Date: </span>
-              <span style={{ color: '#333' }}>{formatDate(invoiceData.date)}</span>
-            </div>
-            <div>
-              <span style={{ fontWeight: '600', color: '#666' }}>Invoice Number: </span>
-              <span style={{ color: '#333' }}>{invoiceData.invoiceNumber}</span>
-            </div>
+          <div>
+            <span style={{ fontWeight: '600', color: '#666' }}>Invoice Date: </span>
+            <span style={{ color: '#333' }}>{formatDate(invoiceData.date)}</span>
+          </div>
+          <div>
+            <span style={{ fontWeight: '600', color: '#666' }}>Invoice Number: </span>
+            <span style={{ color: '#333' }}>{invoiceData.invoiceNumber}</span>
+          </div>
         </div>
         {invoiceData.customFields?.causeNumber && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div>
-                  <span style={{ fontWeight: '600', color: '#666' }}>Cause Number: </span>
-                  <span style={{ color: '#333' }}>{invoiceData.customFields.causeNumber}</span>
-                </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div>
+              <span style={{ fontWeight: '600', color: '#666' }}>Cause Number: </span>
+              <span style={{ color: '#333' }}>{invoiceData.customFields.causeNumber}</span>
             </div>
+          </div>
         )}
         {serviceTypeValue && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
@@ -148,7 +148,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
 
         {invoiceData.customFields?.comments && (
           <div style={{ marginTop: 10 }}>
-            <div style={{ 
+            <div style={{
               backgroundColor: '#fffbeb',
               border: '1px solid #fde68a',
               borderRadius: 8,
@@ -169,21 +169,21 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
 
       {/* Line Items Table - Matching Image Layout */}
       <div className="no-break" style={{ marginBottom: dense ? '20px' : '30px' }}>
-        <table style={{ 
-          width: '100%', 
+        <table style={{
+          width: '100%',
           borderCollapse: 'collapse',
           border: '1px solid #e5e7eb'
         }}>
           <thead>
-            <tr style={{ 
+            <tr style={{
               backgroundColor: '#f9fafb',
               pageBreakInside: 'avoid'
             }}>
-              <th style={{ 
-                border: '1px solid #e5e7eb', 
+              <th style={{
+                border: '1px solid #e5e7eb',
                 padding: thPad,
-                textAlign: 'left', 
-                fontWeight: '600', 
+                textAlign: 'left',
+                fontWeight: '600',
                 color: '#333',
                 fontSize: '13px',
                 verticalAlign: 'middle',
@@ -191,11 +191,11 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
               }}>
                 Transcript
               </th>
-              <th style={{ 
-                border: '1px solid #e5e7eb', 
+              <th style={{
+                border: '1px solid #e5e7eb',
                 padding: thPad,
-                textAlign: 'left', 
-                fontWeight: '600', 
+                textAlign: 'left',
+                fontWeight: '600',
                 color: '#333',
                 fontSize: '13px',
                 verticalAlign: 'middle',
@@ -203,11 +203,11 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
               }}>
                 Volume/Pages
               </th>
-              <th style={{ 
-                border: '1px solid #e5e7eb', 
+              <th style={{
+                border: '1px solid #e5e7eb',
                 padding: thPad,
-                textAlign: 'left', 
-                fontWeight: '600', 
+                textAlign: 'left',
+                fontWeight: '600',
                 color: '#333',
                 fontSize: '13px',
                 verticalAlign: 'middle',
@@ -215,11 +215,11 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
               }}>
                 Date
               </th>
-              <th style={{ 
-                border: '1px solid #e5e7eb', 
+              <th style={{
+                border: '1px solid #e5e7eb',
                 padding: thPad,
-                textAlign: 'right', 
-                fontWeight: '600', 
+                textAlign: 'right',
+                fontWeight: '600',
                 color: '#333',
                 fontSize: '13px',
                 verticalAlign: 'middle',
@@ -232,8 +232,8 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
           <tbody>
             {lineItemsWithTotals.map((item, index) => (
               <tr key={index} style={{ breakInside: 'avoid' }}>
-                <td style={{ 
-                  border: '1px solid #e5e7eb', 
+                <td style={{
+                  border: '1px solid #e5e7eb',
                   padding: tdPad,
                   fontSize: '13px',
                   verticalAlign: 'top',
@@ -243,26 +243,26 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                 }}>
                   {item.description}
                 </td>
-                <td style={{ 
-                  border: '1px solid #e5e7eb', 
+                <td style={{
+                  border: '1px solid #e5e7eb',
                   padding: tdPad,
                   fontSize: '13px',
                   verticalAlign: 'top'
                 }}>
                   {item.notes || ''}
                 </td>
-                <td style={{ 
-                  border: '1px solid #e5e7eb', 
+                <td style={{
+                  border: '1px solid #e5e7eb',
                   padding: tdPad,
                   fontSize: '13px',
                   verticalAlign: 'top'
                 }}>
                   {invoiceData.customFields?.dateOfHearing ? formatDate(invoiceData.customFields.dateOfHearing) : ''}
                 </td>
-                <td style={{ 
-                  border: '1px solid #e5e7eb', 
+                <td style={{
+                  border: '1px solid #e5e7eb',
                   padding: tdPad,
-                  textAlign: 'right', 
+                  textAlign: 'right',
                   fontWeight: '600',
                   fontSize: '13px',
                   verticalAlign: 'top'
@@ -273,29 +273,29 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
             ))}
           </tbody>
           <tfoot>
-            <tr style={{ 
+            <tr style={{
               backgroundColor: '#f9fafb',
               pageBreakInside: 'avoid',
               breakInside: 'avoid'
             }}>
-              <td 
-                colSpan={3} 
-                style={{ 
-                  border: '1px solid #e5e7eb', 
+              <td
+                colSpan={3}
+                style={{
+                  border: '1px solid #e5e7eb',
                   padding: thPad,
-                  textAlign: 'right', 
-                  fontWeight: 'bold', 
+                  textAlign: 'right',
+                  fontWeight: 'bold',
                   fontSize: '15px'
                 }}
               >
                 Total:
               </td>
-              <td style={{ 
-                border: '1px solid #e5e7eb', 
+              <td style={{
+                border: '1px solid #e5e7eb',
                 padding: thPad,
-                textAlign: 'right', 
-                fontWeight: 'bold', 
-                fontSize: '15px', 
+                textAlign: 'right',
+                fontWeight: 'bold',
+                fontSize: '15px',
                 color: '#000'
               }}>
                 {formatCurrency(grandTotal)}
@@ -306,25 +306,25 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
       </div>
 
       {/* Payment Options */}
-      <div className={compact ? 'break-before no-break' : 'no-break'} style={{ 
-        backgroundColor: '#f0fdf4', 
-        border: '1px solid #bbf7d0', 
-        borderRadius: '8px', 
+      <div className={compact ? 'break-before no-break' : 'no-break'} style={{
+        backgroundColor: '#f0fdf4',
+        border: '1px solid #bbf7d0',
+        borderRadius: '8px',
         padding: dense || compact ? '16px' : '24px',
         marginBottom: dense ? '20px' : '30px',
         pageBreakInside: 'avoid' // Keep payment options together when possible
       }}>
-        <h3 style={{ 
-          fontSize: '16px', 
-          fontWeight: '600', 
-          color: '#333', 
+        <h3 style={{
+          fontSize: '16px',
+          fontWeight: '600',
+          color: '#333',
           margin: '0 0 16px 0'
         }}>
           Payment Options:
         </h3>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: compact ? '1fr' : '1fr 1fr', 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: compact ? '1fr' : '1fr 1fr',
           gap: dense ? '16px' : '24px',
           alignItems: 'start'
         }}>
@@ -333,8 +333,8 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
             <div style={{ width: 128, height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden', border: '2px solid #e9d5ff', borderRadius: '8px', padding: '4px', backgroundColor: 'white' }}>
               {/* Use regular img tag instead of Next Image for PDF generation compatibility */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src="/assets/Venmo-Val.jpg" 
+              <img
+                src="/assets/Venmo-Val.jpg"
                 alt="Venmo QR Code"
                 width={120}
                 height={120}
@@ -367,7 +367,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
       </div>
 
       {/* Signatures */}
-      <div className="no-break" style={{ 
+      <div className="no-break" style={{
         display: 'flex',
         flexDirection: compact ? 'column' : 'row',
         justifyContent: 'flex-start',
@@ -381,7 +381,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
           <p style={{ color: '#666', fontWeight: 500, margin: '0 0 6px 0', fontSize: 14 }}>
             Court Reporter Signature:
           </p>
-          <div style={{ transform: 'scale(0.75)', transformOrigin: 'left top', display: 'inline-block', marginBottom: dense ? 8 : 10 }}>
+          <div style={{ transform: 'scale(0.61875)', transformOrigin: 'left top', display: 'inline-block', marginTop: 12, marginBottom: dense ? 8 : 10 }}>
             <SignatureImage showDetails={false} />
           </div>
           <div style={{ borderTop: '1px solid #9ca3af', width: '260px', marginBottom: 4 }} />
@@ -395,20 +395,14 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
             <div style={{ height: 80 }}></div> {/* Spacer to align bottom line with signature */}
             <div style={{ borderTop: '1px solid #9ca3af', width: '260px', marginBottom: 4 }} />
             <p style={{ color: '#6b7280', fontSize: 12, margin: 0 }}>
-              {invoiceData.customFields?.judgeName ? (
-                <span dangerouslySetInnerHTML={{ 
-                  __html: invoiceData.customFields.judgeName.replace(/22nd/g, '22<sup>nd</sup>') 
-                }} />
-              ) : (
-                "Judge's Signature"
-              )}
+              {invoiceData.customFields?.judgeSignatureName || 'Judge R. Bruce Boyer'}
             </p>
           </div>
         )}
       </div>
 
       {/* Footer - Blank per requirements */}
-      <div style={{ 
+      <div style={{
         textAlign: 'center',
         paddingTop: '16px',
         borderTop: '1px solid #e5e7eb',

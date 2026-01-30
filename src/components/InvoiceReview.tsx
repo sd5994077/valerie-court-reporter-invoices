@@ -32,24 +32,24 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const branding = getBranding();
-  
+
   // Calculate totals
   const lineItemsWithTotals = invoiceData.lineItems.map(item => ({
     ...item,
     total: item.quantity * item.rate
   }));
-  
+
   const grandTotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
   const includeJudgeSignature = !!invoiceData.customFields?.includeJudgeSignature;
 
   const handleFinalize = async () => {
     setIsProcessing(true);
-    
+
     try {
       // Generate invoice number at finalization (industry standard)
       // This prevents race conditions and ensures unique sequential numbering
       const invoiceNumber = generateNextInvoiceNumber();
-      
+
       // Create finalized invoice with unique ID and generated invoice number
       // Default status to 'pending' so it shows up in dashboard immediately
       const finalizedData: FinalizedInvoice = {
@@ -68,7 +68,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
         validator: (data) => Array.isArray(data),
         version: INVOICE_CURRENT_VERSION
       });
-      
+
       invoices.push(finalizedData);
       safeSetToStorage('finalizedInvoices', invoices, INVOICE_CURRENT_VERSION);
 
@@ -78,11 +78,11 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
 
       setFinalizedInvoice(finalizedData);
       setIsFinalized(true);
-      
+
       // Show success toast with the actual invoice number
       setToastMessage(`🎉 Invoice ${finalizedData.invoiceNumber} has been finalized! You can now download the PDF or create a new invoice.`);
       setShowToast(true);
-      
+
     } catch (error) {
       logger.error('Failed to finalize invoice:', error);
       setToastMessage('Failed to finalize invoice. Please try again.');
@@ -94,12 +94,12 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
 
   const handleDownloadPDF = async () => {
     setPdfGenerating(true);
-    
+
     try {
       // Use finalized invoice data (with real invoice number) if available
       const dataForPDF = finalizedInvoice || invoiceData;
       const result = await generatePDF(dataForPDF);
-      
+
       // Update the saved invoice to mark PDF as generated
       if (finalizedInvoice) {
         const updatedInvoice = { ...finalizedInvoice, pdfGenerated: true };
@@ -109,7 +109,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
           validator: (data) => Array.isArray(data),
           version: INVOICE_CURRENT_VERSION
         });
-        
+
         const invoiceIndex = invoices.findIndex((inv: FinalizedInvoice) => inv.id === finalizedInvoice.id);
         if (invoiceIndex !== -1) {
           invoices[invoiceIndex] = updatedInvoice;
@@ -117,7 +117,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
         }
         setFinalizedInvoice(updatedInvoice);
       }
-      
+
       if (result.method === 'ios-share') {
         setToastMessage('✅ PDF saved! Open Files app to view.');
       } else if (result.method === 'ios-view') {
@@ -126,7 +126,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
         setToastMessage('✅ PDF downloaded successfully!');
       }
       setShowToast(true);
-      
+
     } catch (error) {
       logger.error('PDF failed:', error);
       const msg = error instanceof Error ? error.message : 'PDF generation failed';
@@ -299,7 +299,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                     <div className="flex justify-between">
                       <span className="text-gray-600 font-bold">Service Type:</span>
                       <span className="text-gray-800 text-right font-bold">
-                        {invoiceData.customFields.serviceType === 'Other' 
+                        {invoiceData.customFields.serviceType === 'Other'
                           ? invoiceData.customFields.serviceTypeOther || 'Other'
                           : invoiceData.customFields.serviceType}
                       </span>
@@ -380,7 +380,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                       </div>
                     </div>
                   ))}
-                  
+
                   {/* Mobile Grand Total */}
                   <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-4">
                     <div className="flex justify-between items-center">
@@ -434,16 +434,20 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-6 sm:space-y-0 sm:space-x-8 mt-4">
                 <div className="text-center sm:text-left">
                   <p className="text-gray-600 font-medium mb-2">Court Reporter Signature:</p>
-                  <SignatureImage />
+                  <div className="inline-block origin-top-left transform scale-[0.5625] mb-2 sm:mb-1">
+                    <SignatureImage showDetails={false} />
+                  </div>
+                  <div className="border-t border-gray-400 w-64 mx-auto sm:mx-0 mb-1" />
+                  <p className="text-gray-500 text-sm">
+                    Valerie De Leon, CSR #13025
+                  </p>
                 </div>
 
                 {includeJudgeSignature && (
                   <div className="text-center sm:text-left sm:self-end">
                     <div className="border-t border-gray-400 w-64 mx-auto sm:mx-0 mb-1" />
                     <p className="text-gray-500 text-sm">
-                      {invoiceData.customFields?.judgeName 
-                        ? invoiceData.customFields.judgeName 
-                        : "Judge's Signature"}
+                      {invoiceData.customFields?.judgeSignatureName || 'Judge R. Bruce Boyer'}
                     </p>
                   </div>
                 )}

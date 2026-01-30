@@ -2,6 +2,34 @@
 
 All notable changes to the Court Reporter Invoice System will be documented in this file.
 
+## [2.3.0] - 2026-01-28
+
+### Added
+- **Custom Judge Signature Override**: Added emergency override option for judge signature line
+  - New checkbox "Use different judge for signature" appears when "Include Judge Signature" is enabled
+  - Allows entering custom judge name for signature line in emergency situations
+  - Defaults to "Judge R. Bruce Boyer" when override is not used
+
+### Changed
+- **Service Type Labels**: Updated dropdown labels from plural to singular form
+  - "Appeals" → "Appeal"
+  - "Transcripts" → "Transcript"
+- **Judge Signature Default**: Judge signature line now defaults to "Judge R. Bruce Boyer" instead of using the selected judge from the dropdown
+- **Signature Size**: Reduced Valerie's signature size by 25% on PDF invoices (from 75% to 56.25% scale)
+
+### Technical
+- Added `judgeSignatureName` field to `customFields` type definition
+- Judge dropdown remains independent and continues to work for auto-filling line item descriptions
+- Updated `InvoiceForm.tsx` with new state variables: `useCustomJudgeSignature` and `customJudgeSignatureName`
+- Modified `InvoicePDF.tsx` to use `judgeSignatureName` field with fallback to default
+
+### Files Modified
+- `src/types/invoice.ts` - Added `judgeSignatureName` field
+- `src/components/InvoiceForm.tsx` - Service type labels, custom judge signature override UI
+- `src/components/InvoicePDF.tsx` - Judge signature logic and signature size reduction
+
+---
+
 ## [2.2.0] - 2025-12-23
 
 ### Added

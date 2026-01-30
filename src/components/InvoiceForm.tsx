@@ -22,7 +22,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   const [toastType, setToastType] = useState<'success' | 'warning' | 'error'>('success');
 
   // Add state for field validation timing
-  const [validationTrigger, setValidationTrigger] = useState<{[key: string]: boolean}>({});
+  const [validationTrigger, setValidationTrigger] = useState<{ [key: string]: boolean }>({});
 
   // Judges State
   const [judges, setJudges] = useState<string[]>(['Judge R. Bruce Boyer']);
@@ -74,7 +74,11 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   const [includeJudgeSignature, setIncludeJudgeSignature] = useState(false);
   // judgeName logic is now handled by selectedJudge/customJudge but we keep this for consistency with previous code if needed, 
   // but we will use selectedJudge primarily.
-  
+
+  // Custom Judge Signature Override
+  const [useCustomJudgeSignature, setUseCustomJudgeSignature] = useState(false);
+  const [customJudgeSignatureName, setCustomJudgeSignatureName] = useState('');
+
   // Service Type
   const [serviceType, setServiceType] = useState('');
   const [serviceTypeOther, setServiceTypeOther] = useState('');
@@ -100,7 +104,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   };
 
   const updateLineItem = (index: number, field: string, value: any) => {
-    const updated = lineItems.map((item, i) => 
+    const updated = lineItems.map((item, i) =>
       i === index ? { ...item, [field]: value } : item
     );
     setLineItems(updated);
@@ -164,7 +168,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   // Validation for required fields
   const validateForm = () => {
     const errors: string[] = [];
-    
+
     // Check cause number (replaces client name requirement)
     if (!causeNumber.trim()) {
       errors.push('Cause Number is required');
@@ -172,34 +176,34 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
 
     // Check Case (new field)
     if (!caseName.trim()) {
-        errors.push('Case Name is required');
+      errors.push('Case Name is required');
     }
-    
+
     // Check county
     if (!county) {
       errors.push('County is required');
     }
-    
+
     // Check service type
     if (!serviceType) {
       errors.push('Service Type is required');
     }
-    
+
     // Filter out empty line items for validation
     const nonEmptyItems = lineItems.filter(item => !isLineItemEmpty(item));
-    
+
     // Check that we have at least one non-empty line item
     if (nonEmptyItems.length === 0) {
       errors.push('At least one line item with description and amount is required');
     }
-    
+
     // Check line items - if total > 0, description is required
     nonEmptyItems.forEach((item, index) => {
       if (item.total > 0 && !item.description.trim()) {
         errors.push(`Description is required for Line Item ${item.number}`);
       }
     });
-    
+
     return errors;
   };
 
@@ -231,11 +235,11 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
     // "Judge R. Bruce Boyer\nCauseNo. CR2024-562A\nState of Texas vs. Shad Modesett"
     const judge = selectedJudge === 'Other' ? customJudge : selectedJudge;
     const description = `${judge}\nCauseNo. ${causeNumber}\n${caseName}`;
-    
+
     const updated = [...lineItems];
     updated[0] = {
-        ...updated[0],
-        description: description
+      ...updated[0],
+      description: description
     };
     setLineItems(updated);
     showToastMessage('Line item description populated', 'success');
@@ -243,18 +247,23 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Auto-remove empty line items before validation
     const nonEmptyItems = lineItems.filter(item => !isLineItemEmpty(item));
-    
+
     // Validate form
     const validationErrors = validateForm();
     if (validationErrors.length > 0) {
       alert('Please fix the following errors:\n\n' + validationErrors.join('\n'));
       return;
     }
-    
+
     const finalJudgeName = selectedJudge === 'Other' ? customJudge : selectedJudge;
+
+    // Determine judge signature name: use custom if override is enabled, otherwise default to Judge Boyer
+    const judgeSignatureName = useCustomJudgeSignature && customJudgeSignatureName.trim()
+      ? customJudgeSignatureName.trim()
+      : 'Judge R. Bruce Boyer';
 
     const formData: InvoiceFormData = {
       date,
@@ -286,6 +295,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
         dateOfHearing,
         includeJudgeSignature,
         judgeName: finalJudgeName,
+        judgeSignatureName: includeJudgeSignature ? judgeSignatureName : undefined,
         comments: comments.trim() ? comments.trim() : undefined,
         serviceType: serviceType as 'Appeals' | 'Transcripts' | 'Other' | undefined,
         serviceTypeOther: serviceType === 'Other' ? serviceTypeOther : undefined
@@ -304,7 +314,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       // Populate invoice details
       setDate(draftData.date || new Date().toISOString().split('T')[0]);
       setInvoiceNumber(draftData.invoiceNumber || '');
-      
+
       // Populate custom fields
       if (draftData.customFields) {
         setCounty(draftData.customFields.county || '');
@@ -313,25 +323,33 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
         setDateOfHearing(draftData.customFields.dateOfHearing || '');
         setIncludeJudgeSignature(!!draftData.customFields.includeJudgeSignature);
         setComments(draftData.customFields.comments || '');
-        
+
         // Handle Judge Name
         const draftJudge = draftData.customFields.judgeName;
         if (draftJudge) {
-            if (judges.includes(draftJudge)) {
-                setSelectedJudge(draftJudge);
-            } else {
-                // If judge is not in list (e.g. was custom), maybe add to list or just set as Other + Custom?
-                // For now, let's just add it to list implicitly or set as custom
-                // Simple approach: set as Other and fill custom
-                // Better approach: Check if it matches default, if not, it's 'Other' or we add it?
-                // Let's add it to the list if it's not there to simplify
-                if (!judges.includes(draftJudge)) {
-                    setJudges(prev => [...prev, draftJudge]);
-                    setSelectedJudge(draftJudge);
-                }
+          if (judges.includes(draftJudge)) {
+            setSelectedJudge(draftJudge);
+          } else {
+            // If judge is not in list (e.g. was custom), maybe add to list or just set as Other + Custom?
+            // For now, let's just add it to list implicitly or set as custom
+            // Simple approach: set as Other and fill custom
+            // Better approach: Check if it matches default, if not, it's 'Other' or we add it?
+            // Let's add it to the list if it's not there to simplify
+            if (!judges.includes(draftJudge)) {
+              setJudges(prev => [...prev, draftJudge]);
+              setSelectedJudge(draftJudge);
             }
+          }
         }
-        
+
+        // Handle Custom Judge Signature
+        if (draftData.customFields.judgeSignatureName) {
+          if (draftData.customFields.judgeSignatureName !== 'Judge R. Bruce Boyer') {
+            setUseCustomJudgeSignature(true);
+            setCustomJudgeSignatureName(draftData.customFields.judgeSignatureName);
+          }
+        }
+
         setServiceType(draftData.customFields.serviceType || '');
         setServiceTypeOther(draftData.customFields.serviceTypeOther || '');
       }
@@ -394,69 +412,68 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
             </h2>
           </div>
           <div className="p-6">
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Judge Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Judge <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                      value={selectedJudge}
-                      onChange={(e) => {
-                          setSelectedJudge(e.target.value);
-                          if (e.target.value !== 'Other') {
-                              setCustomJudge('');
-                          }
-                      }}
-                    >
-                      {judges.map((judge, idx) => (
-                        <option key={idx} value={judge}>{judge}</option>
-                      ))}
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  {selectedJudge === 'Other' && (
-                    <div className="mt-3">
-                        <input 
-                            type="text"
-                            placeholder="Enter Judge Name"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                            value={customJudge}
-                            onChange={(e) => setCustomJudge(e.target.value)}
-                            onBlur={handleCustomJudgeBlur}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Enter name. You will be asked to save it to the list.</p>
-                    </div>
-                  )}
-                </div>
 
-                {/* Case Textbox */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Case <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Judge Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Judge <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    value={selectedJudge}
+                    onChange={(e) => {
+                      setSelectedJudge(e.target.value);
+                      if (e.target.value !== 'Other') {
+                        setCustomJudge('');
+                      }
+                    }}
+                  >
+                    {judges.map((judge, idx) => (
+                      <option key={idx} value={judge}>{judge}</option>
+                    ))}
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                {selectedJudge === 'Other' && (
+                  <div className="mt-3">
                     <input
                       type="text"
-                      placeholder="e.g. State of Texas vs. ..."
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
-                        shouldShowValidation('caseName') && !caseName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
-                      value={caseName}
-                      onChange={(e) => setCaseName(e.target.value)}
-                      onBlur={() => handleFieldBlur('caseName')}
-                      required
+                      placeholder="Enter Judge Name"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      value={customJudge}
+                      onChange={(e) => setCustomJudge(e.target.value)}
+                      onBlur={handleCustomJudgeBlur}
                     />
-                    {shouldShowValidation('caseName') && !caseName.trim() && (
-                        <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-2 py-1 rounded shadow-sm z-10">
-                          Case is required
-                        </p>
-                    )}
+                    <p className="text-xs text-gray-500 mt-1">Enter name. You will be asked to save it to the list.</p>
                   </div>
+                )}
+              </div>
+
+              {/* Case Textbox */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Case <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="e.g. State of Texas vs. ..."
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${shouldShowValidation('caseName') && !caseName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                    value={caseName}
+                    onChange={(e) => setCaseName(e.target.value)}
+                    onBlur={() => handleFieldBlur('caseName')}
+                    required
+                  />
+                  {shouldShowValidation('caseName') && !caseName.trim() && (
+                    <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-2 py-1 rounded shadow-sm z-10">
+                      Case is required
+                    </p>
+                  )}
                 </div>
+              </div>
             </div>
 
             {/* Cause Number - New Required Field */}
@@ -468,9 +485,8 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                 <input
                   type="text"
                   placeholder="e.g., CR2094-542A"
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
-                    shouldShowValidation('causeNumber') && !causeNumber.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${shouldShowValidation('causeNumber') && !causeNumber.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                   value={causeNumber}
                   onChange={(e) => setCauseNumber(e.target.value)}
                   onBlur={() => handleFieldBlur('causeNumber')}
@@ -492,9 +508,8 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                 <div className="relative">
                   <input
                     type="date"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
-                      shouldShowValidation('date') && !date ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${shouldShowValidation('date') && !date ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     onBlur={() => handleFieldBlur('date')}
@@ -513,9 +528,8 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                 </label>
                 <div className="relative">
                   <select
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
-                      shouldShowValidation('county') && !county ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${shouldShowValidation('county') && !county ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                     value={county}
                     onChange={(e) => setCounty(e.target.value)}
                     onBlur={() => handleFieldBlur('county')}
@@ -534,7 +548,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                 </div>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -548,16 +562,15 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                 />
                 <p className="text-sm text-purple-600 mt-1 italic">Auto-generated</p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Service Type <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
-                      shouldShowValidation('serviceType') && !serviceType ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${shouldShowValidation('serviceType') && !serviceType ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                     value={serviceType}
                     onChange={(e) => {
                       setServiceType(e.target.value);
@@ -569,8 +582,8 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                     required
                   >
                     <option value="">Select a service type</option>
-                    <option value="Appeals">Appeals</option>
-                    <option value="Transcripts">Transcripts</option>
+                    <option value="Appeals">Appeal</option>
+                    <option value="Transcripts">Transcript</option>
                     <option value="Other">Other</option>
                   </select>
                   {shouldShowValidation('serviceType') && !serviceType && (
@@ -579,7 +592,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                     </p>
                   )}
                 </div>
-                
+
                 {serviceType === 'Other' && (
                   <div className="mt-3">
                     <input
@@ -606,12 +619,12 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
               <span>Line Items</span>
             </h2>
             <button
-                type="button"
-                onClick={populateFirstLineItem}
-                className="text-sm bg-white text-purple-600 px-3 py-1 rounded hover:bg-purple-50 transition-colors"
-                title="Populate Line Item 1 with Case Info"
+              type="button"
+              onClick={populateFirstLineItem}
+              className="text-sm bg-white text-purple-600 px-3 py-1 rounded hover:bg-purple-50 transition-colors"
+              title="Populate Line Item 1 with Case Info"
             >
-                Auto-fill Description
+              Auto-fill Description
             </button>
           </div>
           <div className="p-6">
@@ -646,11 +659,10 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                           <textarea
                             placeholder="Enter description (e.g., Judge name, Cause No., Case details)"
                             rows={3}
-                            className={`w-full px-3 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm resize-none ${
-                              shouldShowValidation(`description_${index}`) && isDescriptionRequired(item) && !item.description.trim() 
-                                ? 'border-red-300 bg-red-50' 
+                            className={`w-full px-3 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm resize-none ${shouldShowValidation(`description_${index}`) && isDescriptionRequired(item) && !item.description.trim()
+                                ? 'border-red-300 bg-red-50'
                                 : 'border-gray-300'
-                            }`}
+                              }`}
                             value={item.description}
                             onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                             onBlur={() => handleFieldBlur(`description_${index}`)}
@@ -728,7 +740,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                 </tbody>
               </table>
             </div>
-            
+
             <div className="mt-6 flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0">
               <div className="flex justify-center sm:justify-start">
                 <button
@@ -742,7 +754,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                   <span>Add Line Item</span>
                 </button>
               </div>
-              
+
               <div className="text-center lg:text-right">
                 <p className="text-xl sm:text-2xl font-bold text-purple-600">
                   Grand Total: <span className="text-gray-800">{formatCurrency(grandTotal)}</span>
@@ -771,57 +783,101 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
         </div>
 
         {/* Case Information Section */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="bg-purple-600 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16l-3-9m3 9l3-9" />
-            </svg>
-            <span>Case Information</span>
-          </h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date of Hearing (Optional)
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-purple-600 px-6 py-4">
+            <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16l-3-9m3 9l3-9" />
+              </svg>
+              <span>Case Information</span>
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date of Hearing (Optional)
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  value={dateOfHearing}
+                  onChange={(e) => setDateOfHearing(e.target.value)}
+                  onBlur={() => handleFieldBlur('dateOfHearing')}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Will appear in the Date column on invoice
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <label className="inline-flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                  checked={includeJudgeSignature}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    setIncludeJudgeSignature(isChecked);
+                    if (!isChecked) {
+                      setUseCustomJudgeSignature(false);
+                      setCustomJudgeSignatureName('');
+                    }
+                  }}
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Include Judge Signature section on invoice and PDF
+                </span>
               </label>
-              <input
-                type="date"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                value={dateOfHearing}
-                onChange={(e) => setDateOfHearing(e.target.value)}
-                onBlur={() => handleFieldBlur('dateOfHearing')}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Will appear in the Date column on invoice
+              <p className="mt-1 text-xs text-gray-500">
+                When checked, a signature line for "Judge R. Bruce Boyer" will appear below the payment section by default.
               </p>
+
+              {/* Custom Judge Signature Override */}
+              {includeJudgeSignature && (
+                <div className="mt-4 ml-7 space-y-3">
+                  <label className="inline-flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                      checked={useCustomJudgeSignature}
+                      onChange={(e) => {
+                        setUseCustomJudgeSignature(e.target.checked);
+                        if (!e.target.checked) {
+                          setCustomJudgeSignatureName('');
+                        }
+                      }}
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      Use different judge for signature (emergency override)
+                    </span>
+                  </label>
+
+                  {useCustomJudgeSignature && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Judge Name for Signature Line
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter judge name (e.g., Judge Jane Smith)"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        value={customJudgeSignatureName}
+                        onChange={(e) => setCustomJudgeSignatureName(e.target.value)}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        This name will appear below the judge signature line on the PDF.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-
-          <div className="mt-6">
-            <label className="inline-flex items-center space-x-3">
-              <input
-                type="checkbox"
-                className="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
-                checked={includeJudgeSignature}
-                onChange={(e) => {
-                  const isChecked = e.target.checked;
-                  setIncludeJudgeSignature(isChecked);
-                }}
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Include Judge Signature section on invoice and PDF
-              </span>
-            </label>
-            <p className="mt-1 text-xs text-gray-500">
-              When checked, an extra signature line for the Judge ({selectedJudge === 'Other' ? (customJudge || 'Custom Judge') : selectedJudge}) will appear below the payment section.
-            </p>
-          </div>
         </div>
-      </div>
-      
-      {/* Judge Name Confirmation Modal - REMOVED */}
+
+        {/* Judge Name Confirmation Modal - REMOVED */}
 
         {/* Submit Button */}
         <div className="flex justify-center sm:justify-end">
@@ -840,11 +896,10 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-50">
-          <div className={`p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
-            toastType === 'success' ? 'bg-green-500 text-white' :
-            toastType === 'warning' ? 'bg-amber-500 text-white' :
-            'bg-red-500 text-white'
-          }`}>
+          <div className={`p-4 rounded-lg shadow-lg transform transition-all duration-300 ${toastType === 'success' ? 'bg-green-500 text-white' :
+              toastType === 'warning' ? 'bg-amber-500 text-white' :
+                'bg-red-500 text-white'
+            }`}>
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 {toastType === 'success' && (

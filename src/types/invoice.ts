@@ -35,6 +35,7 @@ export interface InvoiceFormData {
     comments?: string; // Optional comments shown on invoice
     includeJudgeSignature?: boolean;
     judgeName?: string | null; // null = generic "Judge's Signature", string = specific judge name
+    judgeSignatureName?: string; // Judge name for signature line (defaults to "Judge R. Bruce Boyer")
     serviceType?: 'Appeals' | 'Transcripts' | 'Other';
     serviceTypeOther?: string; // only used when serviceType is 'Other'
     [key: string]: any; // allow additional custom fields
