@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { InvoiceFormData } from '../types/invoice';
 import { formatCurrency, roundToTwoDecimals } from '../utils/formatters';
+import { getNextInvoiceNumberPreview } from '../utils/invoiceNumberGenerator';
 
 interface InvoiceFormProps {
   onSubmit: (data: InvoiceFormData) => Promise<void>;
@@ -14,7 +15,10 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   const [county, setCounty] = useState('');
   const [causeNumber, setCauseNumber] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [invoiceYear, setInvoiceYear] = useState(String(new Date().getFullYear()));
+  const [invoiceSequence, setInvoiceSequence] = useState('');
   const [caseName, setCaseName] = useState('');
+  const [nextAvailableNumber, setNextAvailableNumber] = useState('');
 
   // Toast notification state
   const [showToast, setShowToast] = useState(false);
@@ -56,13 +60,28 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   };
 
 
-  // Invoice number will be generated at finalization (industry standard)
-  // This prevents race conditions and ensures unique sequential numbering
   useEffect(() => {
-    // Set placeholder - actual number assigned when invoice is finalized
+    // Default invoice number parts (customer can override Year + Sequence)
     const year = new Date().getFullYear();
-    setInvoiceNumber(`INV-${year}-XXXX`);
+    setInvoiceYear(String(year));
+    setInvoiceSequence('');
+    // Get next available number suggestion
+    try {
+      const next = getNextInvoiceNumberPreview();
+      setNextAvailableNumber(next);
+    } catch {
+      setNextAvailableNumber('');
+    }
   }, []);
+
+  // Keep full invoiceNumber in sync with parts.
+  // Sequence is always displayed as 4 digits (leading zeros).
+  useEffect(() => {
+    const y = (invoiceYear || '').replace(/\D/g, '').slice(0, 4);
+    const seqDigits = (invoiceSequence || '').replace(/\D/g, '').slice(0, 4);
+    const seq = seqDigits.length > 0 ? seqDigits.padStart(4, '0') : 'XXXX';
+    setInvoiceNumber(`INV-${y || String(new Date().getFullYear())}-${seq}`);
+  }, [invoiceYear, invoiceSequence]);
 
   // Line Items
   const [lineItems, setLineItems] = useState([
@@ -313,7 +332,15 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
 
       // Populate invoice details
       setDate(draftData.date || new Date().toISOString().split('T')[0]);
-      setInvoiceNumber(draftData.invoiceNumber || '');
+      // Populate invoice number parts (INV-YYYY-####)
+      const inv = draftData.invoiceNumber || '';
+      const match = inv.match(/^INV-(\d{4})-(\d{4})$/);
+      if (match) {
+        setInvoiceYear(match[1]);
+        setInvoiceSequence(match[2]); // padded in sync effect
+      } else {
+        setInvoiceNumber(inv);
+      }
 
       // Populate custom fields
       if (draftData.customFields) {
@@ -554,13 +581,46 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Invoice Number
                 </label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
-                  value={invoiceNumber}
-                  readOnly
-                />
-                <p className="text-sm text-purple-600 mt-1 italic">Auto-generated</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 select-none">INV-</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    className="w-24 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    value={invoiceYear}
+                    onChange={(e) => setInvoiceYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    aria-label="Invoice year"
+                    placeholder="YYYY"
+                  />
+                  <span className="text-sm text-gray-600 select-none">-</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    className="w-28 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    value={invoiceSequence}
+                    onChange={(e) => setInvoiceSequence(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    aria-label="Invoice sequence number"
+                    placeholder="####"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Enter the year and invoice sequence. Sequence will be formatted to 4 digits (leading zeros).
+                </p>
+                <div className="mt-2 space-y-1">
+                  <div className="text-xs text-gray-600">
+                    Preview: <span className="font-medium">{invoiceNumber}</span>
+                  </div>
+                  {nextAvailableNumber && (
+                    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                      </svg>
+                      <span>Next available: {nextAvailableNumber}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>

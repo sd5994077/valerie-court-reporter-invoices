@@ -3,9 +3,12 @@ import { useRouter } from 'next/router';
 import { InvoiceForm } from '../src/components/InvoiceForm';
 import { getBranding } from '../src/config/branding';
 import { MobileNavigation } from '../src/components/MobileNavigation';
+import { Toast } from '../src/components/Toast';
 import type { InvoiceFormData } from '../src/types/invoice';
 import { logger } from '../src/utils/logger';
 import { safeGetFromStorage, safeSetToStorage, safeRemoveFromStorage } from '../src/utils/storage';
+import { INVOICE_CURRENT_VERSION } from '../src/config/invoiceMigrations';
+import { isValidInvoiceNumber } from '../src/utils/invoiceNumberGenerator';
 import Link from 'next/link';
 
 export default function CreateInvoicePage() {
@@ -14,8 +17,42 @@ export default function CreateInvoicePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [draftData, setDraftData] = useState<InvoiceFormData | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'error' | 'info'>('error');
 
   const handleCreateInvoice = async (data: InvoiceFormData) => {
+    // Validate invoice number before allowing review.
+    // (Customer workflow: manual year + sequence; duplicates blocked on review.)
+    if (!data.invoiceNumber || data.invoiceNumber.includes('XXXX')) {
+      setToastMessage('⚠️ Please enter an invoice year and sequence number before continuing to review.');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
+
+    if (!isValidInvoiceNumber(data.invoiceNumber)) {
+      setToastMessage('⚠️ Invoice number must be in the format INV-YYYY-#### (4-digit year and 4-digit sequence).');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
+
+    const finalizedInvoices = safeGetFromStorage({
+      key: 'finalizedInvoices',
+      defaultValue: [],
+      validator: (v) => Array.isArray(v),
+      version: INVOICE_CURRENT_VERSION
+    });
+
+    const duplicate = finalizedInvoices.some((inv: any) => inv?.invoiceNumber === data.invoiceNumber);
+    if (duplicate) {
+      setToastMessage(`❌ Invoice number ${data.invoiceNumber} is already in use. Please choose a different number or delete the existing invoice first.`);
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -30,7 +67,9 @@ export default function CreateInvoicePage() {
       }
     } catch (error) {
       logger.error('Error saving invoice data:', error);
-      alert('Error saving invoice data. Please try again.');
+      setToastMessage('❌ Error saving invoice data. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsLoading(false);
     }
@@ -94,6 +133,15 @@ export default function CreateInvoicePage() {
           draftData={draftData}
         />
       </main>
+
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          show={showToast}
+          onClose={() => setShowToast(false)}
+        />
+      )}
 
       {/* Footer */}
       <footer className="bg-white border-t mt-8 sm:mt-16">

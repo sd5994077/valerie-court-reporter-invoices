@@ -10,7 +10,7 @@ import { formatCurrency, formatDate } from '../utils/formatters';
 import { logger } from '../utils/logger';
 import { safeGetFromStorage, safeSetToStorage, safeRemoveFromStorage } from '../utils/storage';
 import { INVOICE_CURRENT_VERSION } from '../config/invoiceMigrations';
-import { generateNextInvoiceNumber } from '../utils/invoiceNumberGenerator';
+import { generateNextInvoiceNumber, isValidInvoiceNumber } from '../utils/invoiceNumberGenerator';
 
 interface InvoiceReviewProps {
   invoiceData: InvoiceFormData;
@@ -46,9 +46,12 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
     setIsProcessing(true);
 
     try {
-      // Generate invoice number at finalization (industry standard)
-      // This prevents race conditions and ensures unique sequential numbering
-      const invoiceNumber = generateNextInvoiceNumber();
+      // Customer override support:
+      // - If user entered INV-YYYY-####, respect it.
+      // - If placeholder/missing/invalid, fall back to generated next number.
+      const requested = invoiceData.invoiceNumber || '';
+      const useRequested = !!requested && !requested.includes('XXXX') && isValidInvoiceNumber(requested);
+      const invoiceNumber = useRequested ? requested : generateNextInvoiceNumber();
 
       // Create finalized invoice with unique ID and generated invoice number
       // Default status to 'pending' so it shows up in dashboard immediately
@@ -68,6 +71,13 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
         validator: (data) => Array.isArray(data),
         version: INVOICE_CURRENT_VERSION
       });
+
+      // Final guard against duplicates (even if already checked earlier).
+      if (invoices.some((inv: any) => inv?.invoiceNumber === invoiceNumber)) {
+        setToastMessage(`Invoice number ${invoiceNumber} is already in use. Please choose a different number.`);
+        setShowToast(true);
+        return;
+      }
 
       invoices.push(finalizedData);
       safeSetToStorage('finalizedInvoices', invoices, INVOICE_CURRENT_VERSION);
