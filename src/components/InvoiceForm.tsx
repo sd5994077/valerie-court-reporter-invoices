@@ -316,7 +316,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
         judgeName: finalJudgeName,
         judgeSignatureName: includeJudgeSignature ? judgeSignatureName : undefined,
         comments: comments.trim() ? comments.trim() : undefined,
-        serviceType: serviceType as 'Appeals' | 'Transcripts' | 'Other' | undefined,
+        serviceType: serviceType as 'Appeal' | 'Transcript' | 'Other' | undefined,
         serviceTypeOther: serviceType === 'Other' ? serviceTypeOther : undefined
       }
     };
@@ -642,8 +642,8 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                     required
                   >
                     <option value="">Select a service type</option>
-                    <option value="Appeals">Appeal</option>
-                    <option value="Transcripts">Transcript</option>
+                    <option value="Appeal">Appeal</option>
+                    <option value="Transcript">Transcript</option>
                     <option value="Other">Other</option>
                   </select>
                   {shouldShowValidation('serviceType') && !serviceType && (

@@ -184,7 +184,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
       },
       customFields: {
         ...invoiceData.customFields,
-        serviceType: invoiceData.customFields?.serviceType as 'Appeals' | 'Transcripts' | 'Other' | undefined
+        serviceType: invoiceData.customFields?.serviceType as 'Appeal' | 'Transcript' | 'Other' | undefined
       }
     };
 
