@@ -13,6 +13,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
   // Invoice Details
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [county, setCounty] = useState('');
+  const [coaNum, setCoaNum] = useState('');
   const [causeNumber, setCauseNumber] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceYear, setInvoiceYear] = useState(String(new Date().getFullYear()));
@@ -193,11 +194,6 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       errors.push('Cause Number is required');
     }
 
-    // Check Case (new field)
-    if (!caseName.trim()) {
-      errors.push('Case Name is required');
-    }
-
     // Check county
     if (!county) {
       errors.push('County is required');
@@ -309,6 +305,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       })),
       customFields: {
         county,
+        coaNum: coaNum.trim() ? coaNum.trim() : undefined,
         causeNumber,
         caseName,
         dateOfHearing,
@@ -345,6 +342,7 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
       // Populate custom fields
       if (draftData.customFields) {
         setCounty(draftData.customFields.county || '');
+        setCoaNum(draftData.customFields.coaNum || '');
         setCauseNumber(draftData.customFields.causeNumber || '');
         setCaseName(draftData.customFields.caseName || ''); // Populate Case Name
         setDateOfHearing(draftData.customFields.dateOfHearing || '');
@@ -481,24 +479,17 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
               {/* Case Textbox */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Case <span className="text-red-500">*</span>
+                  Case Style
                 </label>
-                <div className="relative">
+                <div>
                   <input
                     type="text"
                     placeholder="e.g. State of Texas vs. ..."
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${shouldShowValidation('caseName') && !caseName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 border-gray-300"
                     value={caseName}
                     onChange={(e) => setCaseName(e.target.value)}
                     onBlur={() => handleFieldBlur('caseName')}
-                    required
                   />
-                  {shouldShowValidation('caseName') && !caseName.trim() && (
-                    <p className="absolute left-0 top-full mt-1 text-red-500 text-xs bg-white px-2 py-1 rounded shadow-sm z-10">
-                      Case is required
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
@@ -621,6 +612,20 @@ export function InvoiceForm({ onSubmit, onPreview, draftData }: InvoiceFormProps
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  COA #
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 03-26-00123-CV"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  value={coaNum}
+                  onChange={(e) => setCoaNum(e.target.value)}
+                  onBlur={() => handleFieldBlur('coaNum')}
+                />
               </div>
 
               <div>

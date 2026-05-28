@@ -42,6 +42,22 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
   const grandTotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
   const includeJudgeSignature = !!invoiceData.customFields?.includeJudgeSignature;
 
+  const persistInvoiceToDatabase = async (finalizedData: FinalizedInvoice) => {
+    const response = await fetch('/api/invoices/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(finalizedData)
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const message = data?.error || `Database save failed (${response.status})`;
+      throw new Error(message);
+    }
+
+    return response.json().catch(() => ({}));
+  };
+
   const handleFinalize = async () => {
     setIsProcessing(true);
 
@@ -79,6 +95,16 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
         return;
       }
 
+      let dbSaved = true;
+
+      // Save to database (best effort). Keep local fallback to avoid blocking workflow.
+      try {
+        await persistInvoiceToDatabase(finalizedData);
+      } catch (dbError) {
+        dbSaved = false;
+        logger.warn('Database save failed, continuing with local storage fallback:', dbError);
+      }
+
       invoices.push(finalizedData);
       safeSetToStorage('finalizedInvoices', invoices, INVOICE_CURRENT_VERSION);
 
@@ -89,8 +115,12 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
       setFinalizedInvoice(finalizedData);
       setIsFinalized(true);
 
-      // Show success toast with the actual invoice number
-      setToastMessage(`🎉 Invoice ${finalizedData.invoiceNumber} has been finalized! You can now download the PDF or create a new invoice.`);
+      // Show success toast with DB sync status
+      setToastMessage(
+        dbSaved
+          ? `Invoice ${finalizedData.invoiceNumber} finalized. Saved to database and local backup.`
+          : `Invoice ${finalizedData.invoiceNumber} finalized. Saved locally only (database sync failed).`
+      );
       setShowToast(true);
 
     } catch (error) {
@@ -273,9 +303,15 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                       <span className="text-gray-800 text-right font-medium">{invoiceData.customFields.causeNumber}</span>
                     </div>
                   )}
+                  {invoiceData.customFields?.coaNum && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-medium">COA #:</span>
+                      <span className="text-gray-800 text-right font-medium">{invoiceData.customFields.coaNum}</span>
+                    </div>
+                  )}
                   {invoiceData.customFields?.caseName && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600 font-medium">Case Name:</span>
+                      <span className="text-gray-600 font-medium">Case Style:</span>
                       <span className="text-gray-800 text-right break-words">{invoiceData.customFields.caseName}</span>
                     </div>
                   )}

@@ -28,6 +28,7 @@ export interface InvoiceFormData {
   lineItems: Omit<LineItem, 'id' | 'total'>[];
   customFields?: {
     county?: string;
+    coaNum?: string; // Court of Appeals number
     causeNumber?: string; // New field - replaces client identification
     description?: string; // Multi-line description field (Judge, Cause No., etc)
     caseName?: string; // Kept for backward compatibility

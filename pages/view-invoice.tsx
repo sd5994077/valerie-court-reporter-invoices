@@ -259,9 +259,15 @@ export default function ViewInvoice() {
                         <span className="text-gray-800">{invoiceData.customFields.county}</span>
                       </div>
                     )}
+                    {invoiceData.customFields?.coaNum && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 font-medium">COA #:</span>
+                        <span className="text-gray-800">{invoiceData.customFields.coaNum}</span>
+                      </div>
+                    )}
                     {invoiceData.customFields?.caseName && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">Case Name:</span>
+                        <span className="text-gray-600 font-medium">Case Style:</span>
                         <span className="text-gray-800">{invoiceData.customFields.caseName}</span>
                       </div>
                     )}

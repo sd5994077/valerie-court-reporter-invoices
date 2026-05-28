@@ -8,6 +8,46 @@ import { sql } from '@vercel/postgres';
 export { sql };
 
 /**
+ * Ensure invoice table has required columns for current app writes.
+ * This keeps older deployed schemas compatible without manual SQL.
+ */
+export async function ensureInvoiceColumns() {
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS due_date DATE`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_name VARCHAR(255)`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_company VARCHAR(255)`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_address TEXT`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_email VARCHAR(255)`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_phone VARCHAR(20)`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS case_name VARCHAR(255)`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS COA_NUM VARCHAR(255)`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS cause_number VARCHAR(255)`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS county VARCHAR(100)`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS date_of_hearing DATE`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS service_type VARCHAR(50)`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS description TEXT`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS comments TEXT`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS total_amount DECIMAL(10,2) NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending'`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS notes TEXT`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS pdf_generated BOOLEAN DEFAULT false`;
+  await sql`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS finalized_at TIMESTAMP`;
+}
+
+/**
+ * Ensure line_items table has required columns for current app writes.
+ * This keeps older deployed schemas compatible without manual SQL.
+ */
+export async function ensureLineItemColumns() {
+  await sql`ALTER TABLE line_items ADD COLUMN IF NOT EXISTS item_number INTEGER`;
+  await sql`ALTER TABLE line_items ADD COLUMN IF NOT EXISTS description TEXT`;
+  await sql`ALTER TABLE line_items ADD COLUMN IF NOT EXISTS quantity DECIMAL(10,2)`;
+  await sql`ALTER TABLE line_items ADD COLUMN IF NOT EXISTS rate DECIMAL(10,2)`;
+  await sql`ALTER TABLE line_items ADD COLUMN IF NOT EXISTS amount DECIMAL(10,2)`;
+  await sql`ALTER TABLE line_items ADD COLUMN IF NOT EXISTS order_index INTEGER DEFAULT 0`;
+  await sql`ALTER TABLE line_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
+}
+
+/**
  * Test database connection
  */
 export async function testConnection() {
@@ -66,6 +106,7 @@ export async function initializeTables() {
         
         -- Case/Project information
         case_name VARCHAR(255),
+        COA_NUM VARCHAR(255),
         cause_number VARCHAR(255),
         county VARCHAR(100),
         date_of_hearing DATE,
@@ -157,6 +198,10 @@ export async function initializeTables() {
     await sql`CREATE INDEX IF NOT EXISTS idx_appeals_user_status ON appeals(user_id, status)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_appeals_deadline ON appeals(appeal_deadline)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_appeal_extensions_appeal ON appeal_extensions(appeal_id)`;
+
+    // Backward-compatible schema updates for existing databases
+    await ensureInvoiceColumns();
+    await ensureLineItemColumns();
 
     return { success: true, message: 'All tables created successfully' };
   } catch (error) {

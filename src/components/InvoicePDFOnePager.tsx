@@ -61,12 +61,18 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
         </div>
       </div>
 
-      {(invoiceData.customFields?.causeNumber || serviceTypeValue) && (
+      {(invoiceData.customFields?.causeNumber || invoiceData.customFields?.coaNum || serviceTypeValue) && (
         <div className="no-break" style={{ display: 'flex', justifyContent: 'flex-end', gap: 18, marginBottom: 10 }}>
           {invoiceData.customFields?.causeNumber && (
             <div>
               <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Cause Number: </span>
               <span style={{ fontSize: 12 }}>{invoiceData.customFields.causeNumber}</span>
+            </div>
+          )}
+          {invoiceData.customFields?.coaNum && (
+            <div>
+              <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>COA #: </span>
+              <span style={{ fontSize: 12 }}>{invoiceData.customFields.coaNum}</span>
             </div>
           )}
           {serviceTypeValue && (

@@ -129,12 +129,20 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
             <span style={{ color: '#333' }}>{invoiceData.invoiceNumber}</span>
           </div>
         </div>
-        {invoiceData.customFields?.causeNumber && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <div>
-              <span style={{ fontWeight: '600', color: '#666' }}>Cause Number: </span>
-              <span style={{ color: '#333' }}>{invoiceData.customFields.causeNumber}</span>
-            </div>
+        {(invoiceData.customFields?.causeNumber || invoiceData.customFields?.coaNum) && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 18 }}>
+            {invoiceData.customFields?.causeNumber && (
+              <div>
+                <span style={{ fontWeight: '600', color: '#666' }}>Cause Number: </span>
+                <span style={{ color: '#333' }}>{invoiceData.customFields.causeNumber}</span>
+              </div>
+            )}
+            {invoiceData.customFields?.coaNum && (
+              <div>
+                <span style={{ fontWeight: '600', color: '#666' }}>COA #: </span>
+                <span style={{ color: '#333' }}>{invoiceData.customFields.coaNum}</span>
+              </div>
+            )}
           </div>
         )}
         {serviceTypeValue && (
