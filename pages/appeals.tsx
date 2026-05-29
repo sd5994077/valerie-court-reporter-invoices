@@ -55,6 +55,7 @@ export interface Appeal {
   status: AppealStatus;
   extensions: ExtensionEntry[];
   notes?: string;
+  invoiceRef?: string;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
@@ -885,10 +886,17 @@ function AppealCard({
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-gray-900 leading-tight mb-1">{appeal.style || 'Untitled Case'}</div>
           <div className="text-xs text-gray-500 truncate">
-            <span className="font-medium text-gray-600">COA:</span> {appeal.courtOfAppealsNumber || '—'} 
-            <span className="mx-1.5 text-gray-300">|</span> 
+            <span className="font-medium text-gray-600">COA:</span> {appeal.courtOfAppealsNumber || '—'}
+            <span className="mx-1.5 text-gray-300">|</span>
             <span className="font-medium text-gray-600">Trial:</span> {appeal.trialCourtCaseNumber || '—'}
           </div>
+          {appeal.invoiceRef && (
+            <div className="mt-1">
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-purple-50 text-purple-600 border border-purple-200 px-1.5 py-0.5 rounded-md">
+                Invoice #{appeal.invoiceRef}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1013,6 +1021,11 @@ function CompactCard({
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="font-medium text-gray-900 truncate">{appeal.style || 'Untitled Case'}</div>
+          {appeal.invoiceRef && (
+            <span className="inline-flex items-center text-[10px] font-medium bg-purple-50 text-purple-600 border border-purple-200 px-1.5 py-0.5 rounded-md mt-0.5">
+              Invoice #{appeal.invoiceRef}
+            </span>
+          )}
           <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
             {showDeadline ? (
               <>
@@ -1137,10 +1150,17 @@ function ExpandableCard({
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-gray-900 leading-tight mb-1">{appeal.style || 'Untitled Case'}</div>
             <div className="text-xs text-gray-500 truncate">
-              <span className="font-medium text-gray-600">COA:</span> {appeal.courtOfAppealsNumber || '—'} 
-              <span className="mx-1.5 text-gray-300">|</span> 
+              <span className="font-medium text-gray-600">COA:</span> {appeal.courtOfAppealsNumber || '—'}
+              <span className="mx-1.5 text-gray-300">|</span>
               <span className="font-medium text-gray-600">Trial:</span> {appeal.trialCourtCaseNumber || '—'}
             </div>
+            {appeal.invoiceRef && (
+              <div className="mt-1">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-purple-50 text-purple-600 border border-purple-200 px-1.5 py-0.5 rounded-md">
+                  Invoice #{appeal.invoiceRef}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1339,7 +1359,7 @@ function AppealEditModal({
           <TextField label="Requester Email" type="email" value={form.requesterEmail} onChange={handleEmailChange} error={emailError} disabled={!canEdit} />
           <TextField label="Requester Phone" type="tel" value={form.requesterPhone} onChange={(v) => setForm({ ...form, requesterPhone: v })} disabled={!canEdit} />
           <TextField label="Requester Address" value={form.requesterAddress} onChange={(v) => setForm({ ...form, requesterAddress: v })} disabled={!canEdit} />
-          <TextField label="Court of Appeals Number" value={form.courtOfAppealsNumber} onChange={(v) => setForm({ ...form, courtOfAppealsNumber: v })} disabled={!canEdit} />
+          <TextField label="COA #" value={form.courtOfAppealsNumber} onChange={(v) => setForm({ ...form, courtOfAppealsNumber: v })} disabled={!canEdit} />
           <TextField label="Trial Court Case Number" value={form.trialCourtCaseNumber} onChange={(v) => setForm({ ...form, trialCourtCaseNumber: v })} disabled={!canEdit} />
           <TextField label="Style (e.g., First Last vs The State of Texas)" value={form.style} onChange={(v) => setForm({ ...form, style: v })} className="sm:col-span-2" disabled={!canEdit} />
           <DateField label="Appeal Deadline" value={form.appealDeadline} onChange={(v) => setForm({ ...form, appealDeadline: v })} disabled={!canEdit} />
@@ -1586,7 +1606,7 @@ function AppealForm({ onClose, onCreate }: { onClose: () => void; onCreate: (a: 
           <TextField label="Requester Email" type="email" value={form.requesterEmail} onChange={handleEmailChange} error={emailError} />
           <TextField label="Requester Phone" type="tel" value={form.requesterPhone} onChange={(v) => setForm({ ...form, requesterPhone: v })} />
           <TextField label="Requester Address" value={form.requesterAddress} onChange={(v) => setForm({ ...form, requesterAddress: v })} />
-          <TextField label="Court of Appeals Number" value={form.courtOfAppealsNumber} onChange={(v) => setForm({ ...form, courtOfAppealsNumber: v })} />
+          <TextField label="COA #" value={form.courtOfAppealsNumber} onChange={(v) => setForm({ ...form, courtOfAppealsNumber: v })} />
           <TextField label="Trial Court Case Number" value={form.trialCourtCaseNumber} onChange={(v) => setForm({ ...form, trialCourtCaseNumber: v })} />
           <TextField label="Style (e.g., First Last vs The State of Texas)" value={form.style} onChange={(v) => setForm({ ...form, style: v })} className="sm:col-span-2" />
           <DateField label="Appeal Deadline" value={form.appealDeadline} onChange={(v) => setForm({ ...form, appealDeadline: v })} />

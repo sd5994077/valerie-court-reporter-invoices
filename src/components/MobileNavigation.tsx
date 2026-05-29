@@ -113,7 +113,7 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
                 <span className="hidden lg:inline">Appeals</span>
               </Link>
 
-              <Link 
+              <Link
                 href="/admin-notifications"
                 aria-current={currentPage === 'admin' ? 'page' : undefined}
                 className={`text-white hover:bg-white hover:text-purple-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-purple-600 rounded-lg px-3 py-2 transition-all duration-200 flex items-center space-x-2 ${
@@ -213,7 +213,7 @@ export function MobileNavigation({ currentPage }: MobileNavigationProps) {
                 </div>
               </Link>
 
-              <Link 
+              <Link
                 href="/admin-notifications"
                 onClick={closeMenu}
                 className={`block w-full text-left text-white hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-purple-700 rounded-lg px-3 py-3 transition-all duration-200 ${
