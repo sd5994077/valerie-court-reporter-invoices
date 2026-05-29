@@ -119,40 +119,38 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
         paddingBottom: '12px',
         borderBottom: '1px solid #e5e7eb'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <span style={{ fontWeight: '600', color: '#666' }}>Invoice Date: </span>
-            <span style={{ color: '#333' }}>{formatDate(invoiceData.date)}</span>
+            <div style={{ marginBottom: 4 }}>
+              <span style={{ fontWeight: '600', color: '#666' }}>Invoice Date: </span>
+              <span style={{ color: '#333' }}>{formatDate(invoiceData.date)}</span>
+            </div>
+            <div>
+              <span style={{ fontWeight: '600', color: '#666' }}>Invoice Number: </span>
+              <span style={{ color: '#333' }}>{invoiceData.invoiceNumber}</span>
+            </div>
           </div>
-          <div>
-            <span style={{ fontWeight: '600', color: '#666' }}>Invoice Number: </span>
-            <span style={{ color: '#333' }}>{invoiceData.invoiceNumber}</span>
-          </div>
-        </div>
-        {(invoiceData.customFields?.causeNumber || invoiceData.customFields?.coaNum) && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 18 }}>
+          <div style={{ textAlign: 'right' }}>
             {invoiceData.customFields?.causeNumber && (
-              <div>
+              <div style={{ marginBottom: 4 }}>
                 <span style={{ fontWeight: '600', color: '#666' }}>Cause Number: </span>
                 <span style={{ color: '#333' }}>{invoiceData.customFields.causeNumber}</span>
               </div>
             )}
             {invoiceData.customFields?.coaNum && (
-              <div>
+              <div style={{ marginBottom: 4 }}>
                 <span style={{ fontWeight: '600', color: '#666' }}>COA #: </span>
                 <span style={{ color: '#333' }}>{invoiceData.customFields.coaNum}</span>
               </div>
             )}
+            {serviceTypeValue && (
+              <div>
+                <span style={{ fontWeight: '600', color: '#666' }}>Service Type: </span>
+                <span style={{ color: '#333' }}>{serviceTypeValue}</span>
+              </div>
+            )}
           </div>
-        )}
-        {serviceTypeValue && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
-            <div>
-              <span style={{ fontWeight: '600', color: '#666' }}>Service Type: </span>
-              <span style={{ color: '#333' }}>{serviceTypeValue}</span>
-            </div>
-          </div>
-        )}
+        </div>
 
         {invoiceData.customFields?.comments && (
           <div style={{ marginTop: 10 }}>
@@ -354,9 +352,6 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                 <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#333' }}>Venmo</p>
                 <p style={{ margin: 0, fontSize: 12.5, color: '#666' }}>@ValerieDeLeon-CSR</p>
               </div>
-              <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
-                Scan QR code or search for @ValerieDeLeon-CSR
-              </p>
             </div>
           </div>
 

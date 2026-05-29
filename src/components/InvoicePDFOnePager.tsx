@@ -49,28 +49,27 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
 
       <div style={{ height: 2, background: '#6d28d9', opacity: 0.85, margin: '8px 0 12px' }} />
 
-      {/* Invoice Date and Number - Same Line */}
-      <div className="no-break" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #e5e7eb' }}>
+      {/* Invoice Date/Number left, Cause/COA/Service right */}
+      <div className="no-break" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #e5e7eb' }}>
         <div>
-          <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Invoice Date: </span>
-          <span style={{ fontSize: 12 }}>{formatDate(invoiceData.date)}</span>
+          <div style={{ marginBottom: 4 }}>
+            <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Invoice Date: </span>
+            <span style={{ fontSize: 12 }}>{formatDate(invoiceData.date)}</span>
+          </div>
+          <div>
+            <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Invoice Number: </span>
+            <span style={{ fontSize: 12 }}>{invoiceData.invoiceNumber}</span>
+          </div>
         </div>
-        <div>
-          <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Invoice Number: </span>
-          <span style={{ fontSize: 12 }}>{invoiceData.invoiceNumber}</span>
-        </div>
-      </div>
-
-      {(invoiceData.customFields?.causeNumber || invoiceData.customFields?.coaNum || serviceTypeValue) && (
-        <div className="no-break" style={{ display: 'flex', justifyContent: 'flex-end', gap: 18, marginBottom: 10 }}>
+        <div style={{ textAlign: 'right' }}>
           {invoiceData.customFields?.causeNumber && (
-            <div>
+            <div style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>Cause Number: </span>
               <span style={{ fontSize: 12 }}>{invoiceData.customFields.causeNumber}</span>
             </div>
           )}
           {invoiceData.customFields?.coaNum && (
-            <div>
+            <div style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: 600, color: '#6b7280', fontSize: 12 }}>COA #: </span>
               <span style={{ fontSize: 12 }}>{invoiceData.customFields.coaNum}</span>
             </div>
@@ -82,7 +81,7 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
             </div>
           )}
         </div>
-      )}
+      </div>
 
       {invoiceData.customFields?.comments && (
         <div className="no-break" style={{ marginBottom: 12 }}>
@@ -171,7 +170,6 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
               style={{ objectFit: 'cover', borderRadius: '4px', transform: 'scale(1.05)' }}
             />
           </div>
-          <div style={{ fontSize: 11.5, color: '#6b7280', marginTop: 8, lineHeight: 1.25, whiteSpace: 'normal', wordBreak: 'break-word' }}>Scan QR code or search for <strong>@ValerieDeLeon-CSR</strong></div>
         </div>
       </div>
     </div>
