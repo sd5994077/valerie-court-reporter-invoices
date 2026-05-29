@@ -898,9 +898,7 @@ export function RecentInvoices({ isLoading, invoices, onRefresh }: RecentInvoice
           onClose={() => setAppealModal(null)}
           onSaved={() => {
             setAppealModal(null);
-            setToastMessage('Appeal added successfully');
-            setToastType('success');
-            setShowToast(true);
+            router.push('/appeals');
           }}
         />
       )}
