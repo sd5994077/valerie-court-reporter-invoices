@@ -350,7 +350,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
             <div style={{ flexGrow: 1 }}>
               <div style={{ marginBottom: 6, lineHeight: 1.2 }}>
                 <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#333' }}>Venmo</p>
-                <p style={{ margin: 0, fontSize: 12.5, color: '#666' }}>@ValerieDeLeon-CSR</p>
+                <p style={{ margin: 0, fontSize: 12.5, color: '#666' }}>@valerie-deleon-80669</p>
               </div>
             </div>
           </div>

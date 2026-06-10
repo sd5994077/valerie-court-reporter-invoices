@@ -453,7 +453,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                         </div>
                         <p className="font-medium text-gray-800 leading-none">Venmo</p>
                       </div>
-                      <p className="text-gray-600 mt-2">@ValerieDeLeon-CSR</p>
+                      <p className="text-gray-600 mt-2">@valerie-deleon-80669</p>
                     </div>
                   </div>
 

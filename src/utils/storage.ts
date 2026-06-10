@@ -89,9 +89,13 @@ export function safeSetToStorage(
       if (error.name === 'QuotaExceededError') {
         logger.error('Storage: Quota exceeded - localStorage is full');
         
-        // Show user-friendly error
-        if (typeof window !== 'undefined') {
-          alert('Storage quota exceeded. Please clear some old invoices or archived appeals.');
+        // Clean up accumulated corrupt-backup keys to reclaim space
+        try {
+          Object.keys(localStorage)
+            .filter(k => k.includes('_corrupt_'))
+            .forEach(k => localStorage.removeItem(k));
+        } catch {
+          // Silent fail
         }
       }
     }

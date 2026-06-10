@@ -143,7 +143,7 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
                 <path d="M8 1v14M11.5 4.5c0-1.38-1.79-2.5-3.5-2.5S4.5 3.12 4.5 4.5 6.29 7 8 7s3.5 1.12 3.5 2.5S9.71 12 8 12s-3.5-1.12-3.5-2.5" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
               </svg>
             </div>
-            <div style={{ fontSize: 12.5, color: '#374151' }}>Venmo: <strong>@ValerieDeLeon-CSR</strong></div>
+            <div style={{ fontSize: 12.5, color: '#374151' }}>Venmo: <strong>@valerie-deleon-80669</strong></div>
             <div style={{ ...chip, background: '#3b82f6' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M3 6h18v12H3z" stroke="white" strokeWidth="1.8"/>

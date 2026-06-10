@@ -32,7 +32,7 @@ export function generateNextInvoiceNumber(): string {
   // Find all invoice numbers for this year
   const prefix = `INV-${year}-`;
   const numbersThisYear = invoices
-    .map((inv: any) => inv.invoiceNumber)
+    .map((inv: { invoiceNumber?: string }) => inv.invoiceNumber)
     .filter((num: string) => num && num.startsWith(prefix))
     .map((num: string) => {
       // Extract the number part (e.g., "INV-2026-0042" -> 42)

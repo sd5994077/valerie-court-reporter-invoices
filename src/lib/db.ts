@@ -1,11 +1,11 @@
-import { sql } from '@vercel/postgres';
+import { sql, db } from '@vercel/postgres';
 
 /**
  * Database connection utility using Neon PostgreSQL via Vercel
  * Automatically uses POSTGRES_URL from environment variables
  */
 
-export { sql };
+export { sql, db };
 
 /**
  * Ensure invoice table has required columns for current app writes.

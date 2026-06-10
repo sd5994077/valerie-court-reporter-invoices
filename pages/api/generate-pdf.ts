@@ -33,8 +33,10 @@ export default async function handler(
     // Launch Chromium with serverless-optimized settings
     const execPath = await chromium.executablePath();
     console.log('[PDF API] Chromium path:', execPath);
-    
-    const browser = await puppeteer.launch({
+
+    let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+    try {
+    browser = await puppeteer.launch({
       args: [
         ...chromium.args,
         '--disable-dev-shm-usage', // Important for containerized environments
@@ -80,8 +82,6 @@ export default async function handler(
       },
     });
 
-    await browser.close();
-
     // Puppeteer may return Buffer or Uint8Array depending on version/types.
     // Normalize to Node.js Buffer for reliable validation + response sending.
     const pdfBuffer = Buffer.from(pdfOutput as any);
@@ -95,15 +95,23 @@ export default async function handler(
       throw new Error('Generated file is not a valid PDF');
     }
 
+    // Sanitize filename to prevent header injection (strip quotes, CR, LF)
+    const safeFilename = (filename || 'invoice.pdf').replace(/["\u000d\u000a]/g, '');
+
     // Set response headers for PDF download (best practices)
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     // Use inline for better iOS compatibility, client handles actual download
-    res.setHeader('Content-Disposition', `inline; filename="${filename || 'invoice.pdf'}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
     // Don't set Content-Length - let Node.js handle it automatically to avoid truncation
 
     // Send the PDF using .end() for raw binary data
     res.status(200).end(pdfBuffer);
+    } finally {
+      if (browser) {
+        try { await browser.close(); } catch {}
+      }
+    }
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

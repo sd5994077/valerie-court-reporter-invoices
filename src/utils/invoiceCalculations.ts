@@ -6,20 +6,16 @@
  */
 
 import { roundToTwoDecimals } from './formatters';
-
-export interface LineItem {
-  quantity: number;
-  rate: number;
-}
+import type { LineItem } from '../types/invoice';
 
 export interface Invoice {
-  lineItems: LineItem[];
+  lineItems: Pick<LineItem, 'quantity' | 'rate'>[];
 }
 
 /**
  * Calculate total for a single line item
  */
-export function calculateLineItemTotal(item: LineItem): number {
+export function calculateLineItemTotal(item: Pick<LineItem, 'quantity' | 'rate'>): number {
   return roundToTwoDecimals(item.quantity * item.rate);
 }
 
@@ -37,7 +33,7 @@ export function calculateInvoiceTotal(invoice: Invoice): number {
 /**
  * Calculate total for array of line items
  */
-export function calculateLineItemsTotal(lineItems: LineItem[]): number {
+export function calculateLineItemsTotal(lineItems: Pick<LineItem, 'quantity' | 'rate'>[]): number {
   const total = lineItems.reduce((sum, item) => {
     return sum + calculateLineItemTotal(item);
   }, 0);

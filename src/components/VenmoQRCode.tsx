@@ -49,7 +49,7 @@ export function VenmoQRCode({ hideCaption = false, sizePx = 180, tight = false, 
       {!hideCaption && (
         <div className="text-center mt-2">
           <p className="text-xs font-medium text-purple-700">Scan to Pay</p>
-          <p className="text-xs text-purple-600">@ValerieDeLeon-CSR</p>
+          <p className="text-xs text-purple-600">@valerie-deleon-80669</p>
         </div>
       )}
     </div>

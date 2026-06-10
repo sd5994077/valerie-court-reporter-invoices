@@ -10,8 +10,9 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 class Logger {
   private isDevelopment = process.env.NODE_ENV === 'development';
-  private isDebug = typeof window !== 'undefined' && 
-                    (window as any).__DEBUG_MODE === true;
+  private get isDebug() {
+    return typeof window !== 'undefined' && (window as any).__DEBUG_MODE === true;
+  }
   
   private shouldLog(level: LogLevel): boolean {
     // Always log errors and warnings

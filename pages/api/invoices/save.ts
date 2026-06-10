@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { ensureInvoiceColumns, ensureLineItemColumns, sql } from '../../../src/lib/db';
+import { ensureInvoiceColumns, ensureLineItemColumns, db } from '../../../src/lib/db';
 import type { InvoiceFormData } from '../../../src/types/invoice';
+import { calculateLineItemsTotal } from '../../../src/utils/invoiceCalculations';
+
+let schemaEnsured = false;
 
 type SaveInvoiceRequest = InvoiceFormData & {
   id?: string;
@@ -16,21 +19,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    await ensureInvoiceColumns();
-    await ensureLineItemColumns();
+    if (!schemaEnsured) {
+      await ensureInvoiceColumns();
+      await ensureLineItemColumns();
+      schemaEnsured = true;
+    }
 
     const payload = req.body as SaveInvoiceRequest;
     const invoiceNumber = payload?.invoiceNumber?.trim();
 
     if (!invoiceNumber) {
       return res.status(400).json({ success: false, error: 'invoiceNumber is required' });
-    }
-
-    const duplicateCheck = await sql`
-      SELECT id FROM invoices WHERE invoice_number = ${invoiceNumber} LIMIT 1
-    `;
-    if (duplicateCheck.rows.length > 0) {
-      return res.status(409).json({ success: false, error: `Invoice number ${invoiceNumber} already exists in database` });
     }
 
     const date = payload.date;
@@ -42,13 +41,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       customFields.coaNum ||
       'Unknown Client';
 
-    const totalAmount = (payload.lineItems || []).reduce((sum, item) => {
-      const quantity = Number(item.quantity || 0);
-      const rate = Number(item.rate || 0);
-      return sum + quantity * rate;
-    }, 0);
+    const coercedLineItems = (payload.lineItems || []).map(item => ({
+      quantity: Number(item.quantity || 0),
+      rate: Number(item.rate || 0),
+    }));
+    const totalAmount = calculateLineItemsTotal(coercedLineItems);
 
-    const insertInvoice = await sql`
+    const client = await db.connect();
+    let invoiceId: string | undefined;
+    try {
+      await client.sql`BEGIN`;
+
+      const duplicateCheck = await client.sql`
+        SELECT id FROM invoices WHERE invoice_number = ${invoiceNumber} LIMIT 1
+      `;
+      if (duplicateCheck.rows.length > 0) {
+        await client.sql`ROLLBACK`;
+        return res.status(409).json({ success: false, error: `Invoice number ${invoiceNumber} already exists in database` });
+      }
+
+    const insertInvoice = await client.sql`
       INSERT INTO invoices (
         invoice_number,
         date,
@@ -97,35 +109,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       RETURNING id
     `;
 
-    const invoiceId = insertInvoice.rows[0]?.id;
+      invoiceId = insertInvoice.rows[0]?.id;
 
-    if (invoiceId && Array.isArray(payload.lineItems) && payload.lineItems.length > 0) {
-      for (let i = 0; i < payload.lineItems.length; i += 1) {
-        const item = payload.lineItems[i];
-        const quantity = Number(item.quantity || 0);
-        const rate = Number(item.rate || 0);
-        const amount = quantity * rate;
+      if (invoiceId && Array.isArray(payload.lineItems) && payload.lineItems.length > 0) {
+        for (let i = 0; i < payload.lineItems.length; i += 1) {
+          const item = payload.lineItems[i];
+          const quantity = Number(item.quantity || 0);
+          const rate = Number(item.rate || 0);
+          const amount = quantity * rate;
 
-        await sql`
-          INSERT INTO line_items (
-            invoice_id,
-            item_number,
-            description,
-            quantity,
-            rate,
-            amount,
-            order_index
-          ) VALUES (
-            ${invoiceId},
-            ${item.number || i + 1},
-            ${item.description || ''},
-            ${quantity},
-            ${rate},
-            ${amount},
-            ${i}
-          )
-        `;
+          await client.sql`
+            INSERT INTO line_items (
+              invoice_id,
+              item_number,
+              description,
+              quantity,
+              rate,
+              amount,
+              order_index
+            ) VALUES (
+              ${invoiceId},
+              ${item.number || i + 1},
+              ${item.description || ''},
+              ${quantity},
+              ${rate},
+              ${amount},
+              ${i}
+            )
+          `;
+        }
       }
+
+      await client.sql`COMMIT`;
+    } catch (txError) {
+      await client.sql`ROLLBACK`;
+      throw txError;
+    } finally {
+      client.release();
     }
 
     return res.status(200).json({ success: true, invoiceId });

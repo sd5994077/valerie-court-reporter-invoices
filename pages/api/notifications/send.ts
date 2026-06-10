@@ -39,7 +39,7 @@ export default async function handler(
     });
   } catch (error) {
     console.error('Error sending notifications:', error);
-    res.status(500).json({ message: 'Internal server error', error: String(error) });
+    res.status(500).json({ message: 'Internal server error' });
   }
 }
 
