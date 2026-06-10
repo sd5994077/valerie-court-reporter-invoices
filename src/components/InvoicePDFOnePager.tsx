@@ -160,14 +160,14 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
         </div>
         <div style={{ width: 200, textAlign: 'center' }}>
           {/* Use regular img tag instead of Next Image for PDF generation compatibility */}
-          <div style={{ width: 164, height: 164, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #e9d5ff', borderRadius: '8px', padding: '2px', backgroundColor: 'white' }}>
+          <div style={{ width: 164, height: 164, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #e9d5ff', borderRadius: '8px', backgroundColor: 'white', overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src="/assets/Venmo-Val.jpg" 
               alt="Venmo QR Code"
-              width={160}
-              height={160}
-              style={{ objectFit: 'cover', borderRadius: '4px', transform: 'scale(1.05)' }}
+              width={164}
+              height={164}
+              style={{ objectFit: 'cover', transform: 'scale(1.4)' }}
             />
           </div>
         </div>
