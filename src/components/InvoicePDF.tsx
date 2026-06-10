@@ -344,7 +344,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
                 alt="Venmo QR Code"
                 width={128}
                 height={128}
-                style={{ objectFit: 'cover', borderRadius: '4px', transform: 'scale(1.4)' }}
+                style={{ objectFit: 'cover', borderRadius: '4px', transform: 'scale(1.15)' }}
               />
             </div>
             <div style={{ flexGrow: 1 }}>

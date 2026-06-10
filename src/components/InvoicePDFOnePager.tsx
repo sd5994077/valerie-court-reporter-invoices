@@ -167,7 +167,7 @@ export function InvoicePDFOnePager({ invoiceData }: { invoiceData: InvoiceFormDa
               alt="Venmo QR Code"
               width={164}
               height={164}
-              style={{ objectFit: 'cover', transform: 'scale(1.4)' }}
+              style={{ objectFit: 'cover', transform: 'scale(1.15)' }}
             />
           </div>
         </div>

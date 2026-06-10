@@ -8,7 +8,7 @@ type VenmoQRCodeProps = {
   scale?: number; // scale image inside container to reduce white margins
 };
 
-export function VenmoQRCode({ hideCaption = false, sizePx = 180, tight = false, scale = 1.4 }: VenmoQRCodeProps) {
+export function VenmoQRCode({ hideCaption = false, sizePx = 180, tight = false, scale = 1.15 }: VenmoQRCodeProps) {
   const [imgSrc, setImgSrc] = useState("/assets/Venmo-Val.jpg");
   const [imgError, setImgError] = useState(false);
   const [altTried, setAltTried] = useState(false);
