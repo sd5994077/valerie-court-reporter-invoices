@@ -334,24 +334,11 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
           gap: dense ? '16px' : '24px',
           alignItems: 'start'
         }}>
-          {/* Venmo with QR Code */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-            <div style={{ width: 128, height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden', border: '2px solid #e9d5ff', borderRadius: '8px', backgroundColor: 'white' }}>
-              {/* Use regular img tag instead of Next Image for PDF generation compatibility */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/assets/Venmo-Val.jpg"
-                alt="Venmo QR Code"
-                width={128}
-                height={128}
-                style={{ objectFit: 'cover', borderRadius: '4px', transform: 'scale(1.15)' }}
-              />
-            </div>
-            <div style={{ flexGrow: 1 }}>
-              <div style={{ marginBottom: 6, lineHeight: 1.2 }}>
-                <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#333' }}>Venmo</p>
-                <p style={{ margin: 0, fontSize: 12.5, color: '#666' }}>@valerie-deleon-80669</p>
-              </div>
+          {/* Venmo */}
+          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#333' }}>Venmo</p>
+              <p style={{ margin: 0, fontSize: 12.5, color: '#666' }}>@valerie-deleon-80669</p>
             </div>
           </div>
 

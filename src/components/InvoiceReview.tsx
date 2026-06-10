@@ -441,9 +441,8 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
               <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Payment Options:</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  {/* Venmo block: QR + info */}
+                  {/* Venmo block */}
                   <div className="flex flex-col md:flex-row gap-4 items-start">
-                    <VenmoQRCode hideCaption sizePx={128} />
                     <div>
                       <div className="flex items-center gap-3">
                         <div className="w-6 h-6 bg-green-500 rounded-full inline-flex items-center justify-center shrink-0">
