@@ -1,4 +1,5 @@
 import type { InvoiceFormData } from '../types/invoice';
+import { VENMO_QR_SRC } from '../config/venmo';
 
 export const isProbablyIOS = () => {
   if (typeof navigator === 'undefined') return false;
@@ -99,8 +100,11 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
           // Create a canvas to convert image to base64
           const canvas = document.createElement('canvas');
           
-          // Resize large images to reduce payload (max 400px for QR codes, logos, etc.)
-          const MAX_SIZE = 400;
+          // QR codes must stay lossless and unscaled so they scan reliably
+          const isQr = img.src.includes(VENMO_QR_SRC);
+
+          // Resize large images to reduce payload (max 400px for logos, etc.)
+          const MAX_SIZE = isQr ? Infinity : 400;
           let targetWidth = img.naturalWidth;
           let targetHeight = img.naturalHeight;
           
@@ -126,9 +130,8 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
           
-          // Use JPEG for photos/QR codes (smaller size), PNG only if needed
-          // Most invoice images don't need transparency
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          // JPEG for photos/logos (smaller size), lossless PNG for the QR code
+          const dataUrl = isQr ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.85);
           
           // Validate the data URL was created successfully
           if (!dataUrl || dataUrl.length < 100) {
@@ -150,6 +153,15 @@ export const generatePDF = async (invoiceData: InvoiceFormData) => {
     }
     
     console.log(`[PDF] Image conversion complete: ${successCount} converted, ${skipCount} skipped/failed`);
+
+    // The server-side renderer has no origin, so a QR left with a relative src would
+    // show as a broken image. Drop its box instead and keep the Venmo handle text.
+    images.forEach((img) => {
+      if (img.src.includes(VENMO_QR_SRC) && !img.src.startsWith('data:')) {
+        console.error('[PDF] Venmo QR could not be embedded; removing it from the PDF');
+        (img.parentElement ?? img).remove();
+      }
+    });
     
     // Create a complete HTML document with all styles
     const invoiceHtml = `

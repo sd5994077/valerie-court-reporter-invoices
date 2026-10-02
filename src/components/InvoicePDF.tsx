@@ -2,6 +2,7 @@ import React from 'react';
 import type { InvoiceFormData } from '../types/invoice';
 import { SignatureImage } from './SignatureImage';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { VENMO_HANDLE, VENMO_QR_SRC } from '../config/venmo';
 
 interface InvoicePDFProps {
   invoiceData: InvoiceFormData;
@@ -340,7 +341,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
               {/* Use regular img tag instead of Next Image for PDF generation compatibility */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/assets/Val_venmo_peronal.png"
+                src={VENMO_QR_SRC}
                 alt="Venmo QR Code"
                 width={128}
                 height={128}
@@ -350,7 +351,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
             <div style={{ flexGrow: 1 }}>
               <div style={{ marginBottom: 6, lineHeight: 1.2 }}>
                 <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#333' }}>Venmo</p>
-                <p style={{ margin: 0, fontSize: 12.5, color: '#666' }}>@valerie-deleon-80669</p>
+                <p style={{ margin: 0, fontSize: 12.5, color: '#666' }}>{VENMO_HANDLE}</p>
               </div>
             </div>
           </div>

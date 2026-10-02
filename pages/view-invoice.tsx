@@ -5,6 +5,7 @@ import { SignatureImage } from '../src/components/SignatureImage';
 import { VenmoQRCode } from '../src/components/VenmoQRCode';
 import { Toast } from '../src/components/Toast';
 import { generatePDF, isProbablyIOS } from '../src/utils/pdfGenerator';
+import { VENMO_HANDLE } from '../src/config/venmo';
 import { safeGetFromStorage } from '../src/utils/storage';
 
 // Currency formatting utility
@@ -329,10 +330,10 @@ export default function ViewInvoice() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-800">Venmo</p>
-                          <p className="text-gray-600">@ValerieDeLeon-CSR</p>
+                          <p className="text-gray-600">{VENMO_HANDLE}</p>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500">Scan QR code or search for @ValerieDeLeon-CSR</p>
+                      <p className="text-sm text-gray-500">Scan QR code or search for {VENMO_HANDLE}</p>
                     </div>
                   </div>
 

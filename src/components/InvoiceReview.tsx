@@ -11,6 +11,7 @@ import { logger } from '../utils/logger';
 import { safeGetFromStorage, safeSetToStorage, safeRemoveFromStorage } from '../utils/storage';
 import { INVOICE_CURRENT_VERSION } from '../config/invoiceMigrations';
 import { generateNextInvoiceNumber, isValidInvoiceNumber } from '../utils/invoiceNumberGenerator';
+import { VENMO_HANDLE } from '../config/venmo';
 
 interface InvoiceReviewProps {
   invoiceData: InvoiceFormData;
@@ -453,7 +454,7 @@ export function InvoiceReview({ invoiceData }: InvoiceReviewProps) {
                         </div>
                         <p className="font-medium text-gray-800 leading-none">Venmo</p>
                       </div>
-                      <p className="text-gray-600 mt-2">@valerie-deleon-80669</p>
+                      <p className="text-gray-600 mt-2">{VENMO_HANDLE}</p>
                     </div>
                   </div>
 
