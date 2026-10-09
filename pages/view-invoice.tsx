@@ -7,6 +7,7 @@ import { Toast } from '../src/components/Toast';
 import { generatePDF, isProbablyIOS } from '../src/utils/pdfGenerator';
 import { VENMO_HANDLE } from '../src/config/venmo';
 import { safeGetFromStorage } from '../src/utils/storage';
+import { formatDate } from '../src/utils/formatters';
 
 // Currency formatting utility
 const formatCurrency = (amount: number) => {
@@ -16,15 +17,6 @@ const formatCurrency = (amount: number) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(amount);
-};
-
-// Date formatting utility
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
 };
 
 export default function ViewInvoice() {

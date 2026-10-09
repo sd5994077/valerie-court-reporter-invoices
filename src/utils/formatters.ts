@@ -15,13 +15,17 @@ export const formatCurrency = (amount: number): string => {
 };
 
 /**
- * Format a date string to localized short format
+ * Format calendar dates without shifting their day in the user's timezone.
+ * Timestamp values continue to use local time.
  */
 export const formatDate = (dateString: string): string => {
+  const isCalendarDate = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
+    // Date-only strings are parsed as UTC; format in UTC to preserve the entered day.
+    ...(isCalendarDate ? { timeZone: 'UTC' } : {})
   });
 };
 
